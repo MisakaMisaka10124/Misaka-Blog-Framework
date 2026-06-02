@@ -11,7 +11,9 @@
       "Bash(xargs sed -i '' 's/rgba\\(124, 92, 255/rgba\\(59, 130, 246/g')",
       "Bash(git init *)",
       "Bash(git commit *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(curl -s http://localhost:3000/api/login/captcha)",
+      "Bash(npx tsx *)"
     ]
   }
 }

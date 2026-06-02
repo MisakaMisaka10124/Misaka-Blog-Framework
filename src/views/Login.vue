@@ -161,11 +161,6 @@ onMounted(() => {
   justify-content: center;
 }
 
-.login__captcha-img :deep(svg) {
-  height: 40px;
-  width: 100%;
-  max-width: 120px;
-}
 
 .login__error {
   color: #ef4444;
@@ -190,5 +185,15 @@ onMounted(() => {
 .login__submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+</style>
+
+<style>
+/* 验证码 SVG 样式（v-html 内容需要非 scoped 样式） */
+.login__captcha-img svg {
+  height: 40px;
+  width: 100%;
+  max-width: 120px;
+  display: block;
 }
 </style>
