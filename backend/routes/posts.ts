@@ -45,20 +45,6 @@ function moveImageToSlugDir(tempPath: string, slug: string, filename: string): s
   return `/images/posts/${slug}/${filename}`;
 }
 
-/** 将 _temp 目录中的图片移动到 slug 目录 */
-function moveTempImagesToSlug(slug: string) {
-  const tempDir = path.join(__dirname, '../data/posts/images/_temp');
-  if (!fs.existsSync(tempDir)) return;
-  const tempFiles = fs.readdirSync(tempDir);
-  for (const f of tempFiles) {
-    const tempPath = path.join(tempDir, f);
-    if (fs.statSync(tempPath).isFile()) {
-      moveImageToSlugDir(tempPath, slug, f);
-    }
-  }
-  try { fs.rmdirSync(tempDir); } catch {}
-}
-
 /** 删除 slug 对应的图片目录 */
 function removeImageDir(slug: string) {
   const slugDir = path.join(__dirname, '../data/posts/images', slug);
@@ -170,8 +156,22 @@ router.post('/upload', verifyToken, upload.fields([
     writeFrontmatterField(slug, 'cover', coverUrl);
   }
 
-  // 将 _temp 目录中的图片移动到 slug 目录
-  moveTempImagesToSlug(slug);
+  // 将 _temp 目录中的图片移动到 slug 目录，并更新 md 中的 _temp URL
+  const tempDir = path.join(__dirname, '../data/posts/images/_temp');
+  let mdContent = fs.readFileSync(newMdPath, 'utf-8');
+  if (fs.existsSync(tempDir)) {
+    const tempFiles = fs.readdirSync(tempDir);
+    for (const f of tempFiles) {
+      const tempPath = path.join(tempDir, f);
+      if (fs.statSync(tempPath).isFile()) {
+        const newUrl = moveImageToSlugDir(tempPath, slug, f);
+        // 替换 md 内容中的 _temp URL 为真实 slug URL
+        mdContent = mdContent.replace(`/images/posts/_temp/${f}`, newUrl);
+      }
+    }
+    fs.writeFileSync(newMdPath, mdContent, 'utf-8');
+    try { fs.rmdirSync(tempDir); } catch {}
+  }
 
   // 处理标签
   const tagsStr = req.body.tags || '';
