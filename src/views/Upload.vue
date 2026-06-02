@@ -164,7 +164,6 @@ import axios from 'axios'
 import GlassCard from '../components/GlassCard.vue'
 
 const router = useRouter()
-const token = ref(localStorage.getItem('upload_token') || '')
 
 // ========== 文章列表 ==========
 interface ArticleMeta {
@@ -432,7 +431,7 @@ async function insertImage(file: File) {
     // 传递当前 slug（编辑已有文章时）或 _temp（新建文章时）
     formData.append('slug', editSlug.value || '_temp')
     const { data } = await axios.post('/api/posts/upload-image', formData, {
-      headers: { Authorization: `Bearer ${token.value}`, 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': 'multipart/form-data' },
     })
     insertMd(`![${file.name}](${data.url})`, '')
   } catch (e: any) {
@@ -461,7 +460,7 @@ async function handleSave() {
         formData.append('cover', editCoverFile.value)
       }
       await axios.put(`/api/posts/${editSlug.value}`, formData, {
-        headers: { Authorization: `Bearer ${token.value}`, 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': 'multipart/form-data' },
       })
       saveSuccess.value = '更新成功'
     } else {
@@ -474,7 +473,7 @@ async function handleSave() {
         formData.append('cover', editCoverFile.value)
       }
       await axios.post('/api/posts/upload', formData, {
-        headers: { Authorization: `Bearer ${token.value}`, 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': 'multipart/form-data' },
       })
       saveSuccess.value = '发布成功'
     }
@@ -492,7 +491,7 @@ async function handleSave() {
 async function handleDelete(slug: string) {
   if (!confirm(`确定删除文章「${slug}」？`)) return
   try {
-    await axios.delete(`/api/posts/${slug}`, { headers: { Authorization: `Bearer ${token.value}` } })
+    await axios.delete(`/api/posts/${slug}`)
     await loadArticles()
   } catch (e: any) {
     alert('删除失败: ' + (e.response?.data?.error || e.message))

@@ -1,5 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+/** 检查 JWT 是否有效（未过期） */
+function isTokenValid(): boolean {
+  const token = localStorage.getItem('upload_token')
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -43,7 +55,10 @@ const router = createRouter({
       name: 'upload',
       component: () => import('../views/Upload.vue'),
       beforeEnter: () => {
-        if (!localStorage.getItem('upload_token')) return { name: 'login' }
+        if (!isTokenValid()) {
+          localStorage.removeItem('upload_token')
+          return { name: 'login' }
+        }
       },
     },
     {

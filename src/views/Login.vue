@@ -74,12 +74,19 @@ async function handleLogin() {
 }
 
 onMounted(() => {
-  // 已登录则直接跳转
-  if (localStorage.getItem('upload_token')) {
-    router.replace('/upload')
-  } else {
-    loadCaptcha()
+  // 已登录且 token 未过期则直接跳转
+  const token = localStorage.getItem('upload_token')
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload.exp * 1000 > Date.now()) {
+        router.replace('/upload')
+        return
+      }
+    } catch {}
+    localStorage.removeItem('upload_token')
   }
+  loadCaptcha()
 })
 </script>
 
