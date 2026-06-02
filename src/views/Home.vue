@@ -48,21 +48,12 @@
 
         <!-- 翻页 -->
         <div class="home__pagination" v-if="totalPages > 1">
-          <button
-            class="home__page-btn"
-            :disabled="currentPage <= 1"
-            @click="currentPage--"
-          >
-            上一页
-          </button>
-          <span class="home__page-info">{{ currentPage }} / {{ totalPages }}</span>
-          <button
-            class="home__page-btn"
-            :disabled="currentPage >= totalPages"
-            @click="currentPage++"
-          >
-            下一页
-          </button>
+          <button class="home__page-btn" :disabled="currentPage === 1" @click="currentPage--">上一页</button>
+          <template v-for="p in pageNumbers" :key="p">
+            <span v-if="p === '...'" class="home__page-dots">...</span>
+            <button v-else class="home__page-btn" :class="{ active: p === currentPage }" @click="currentPage = p as number">{{ p }}</button>
+          </template>
+          <button class="home__page-btn" :disabled="currentPage === totalPages" @click="currentPage++">下一页</button>
         </div>
       </section>
 
@@ -97,6 +88,18 @@ const totalPages = computed(() => Math.ceil(posts.value.length / pageSize))
 const pagedPosts = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return posts.value.slice(start, start + pageSize)
+})
+
+const pageNumbers = computed(() => {
+  const total = totalPages.value
+  const cur = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | string)[] = [1]
+  if (cur > 3) pages.push('...')
+  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i)
+  if (cur < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
 })
 
 async function loadData() {
@@ -291,9 +294,15 @@ onMounted(loadData)
   cursor: not-allowed;
 }
 
-.home__page-info {
-  color: var(--color-text-secondary);
-  font-size: 0.9em;
+.home__page-btn.active {
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}
+
+.home__page-dots {
+  color: var(--color-text-muted);
+  padding: 0 4px;
 }
 
 @media (max-width: 900px) {

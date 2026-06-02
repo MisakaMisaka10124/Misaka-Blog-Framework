@@ -6,6 +6,7 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import apiRouter from './routes/index';
 import { buildIndex } from './services/post_index';
+import { syncAllTags } from './services/tag';
 
 const app = express();
 app.use(express.json());
@@ -116,9 +117,10 @@ app.listen(port, async () => {
   console.log(`Backend running on http://localhost:${port}`);
   console.log(`Swagger Docs: http://localhost:${port}/api-docs`);
 
-  // 启动时构建文章索引
+  // 启动时构建文章索引并同步标签
   try {
     const index = buildIndex();
+    syncAllTags(index.posts);
     console.log(`Post index built: ${index.posts.length} posts found`);
   } catch (e) {
     console.log('Post index build skipped (no posts directory or empty)');

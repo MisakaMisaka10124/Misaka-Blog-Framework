@@ -9,7 +9,9 @@
       "Bash(node -e \"const m = require\\('marked'\\); console.log\\(m.marked ? 'v4+' : 'v3-'\\)\")",
       "Bash(npm ls *)",
       "Bash(xargs sed -i '' 's/rgba\\(124, 92, 255/rgba\\(59, 130, 246/g')",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(git commit *)",
+      "Bash(git add *)"
     ]
   }
 }

@@ -13,16 +13,22 @@ const getConfig = () => JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 // 配置 Multer 存储
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // 根据文件类型选择目录
     const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.originalname);
-    const dir = isImage
-      ? path.join(__dirname, '../data/posts/images')
-      : path.join(__dirname, '../', getConfig().paths.posts_dir);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+    if (isImage) {
+      // 图片按年月分目录: images/YYYY/MM/
+      const now = new Date();
+      const year = now.getFullYear().toString();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const dir = path.join(__dirname, '../data/posts/images', year, month);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    } else {
+      const dir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    }
   },
   filename: (req, file, cb) => {
-    // 保留原始文件名（md 文件）或加时间戳前缀（图片）
     const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.originalname);
     const name = isImage ? `${Date.now()}-${file.originalname}` : file.originalname;
     cb(null, name);
@@ -92,20 +98,24 @@ router.post('/upload', verifyToken, upload.fields([
   const tagsStr = req.body.tags || '';
   const tags = tagsStr.split(',').map((t: string) => t.trim()).filter(Boolean);
 
+  // 读取旧标签（用于增量同步）
+  const index = readIndex();
+  const oldPost = index.posts.find(p => p.slug === slug);
+  const oldTags = oldPost?.tags || [];
+
   // 更新文章索引
   const meta = addOrUpdatePost(slug);
 
   // 更新封面（如果上传了封面图片）
   if (coverFile && meta) {
-    meta.cover = `/images/posts/${coverFile.filename}`;
-    // 重新写入索引以包含封面信息
+    const imagesRoot = path.join(__dirname, '../data/posts/images');
+    const relativePath = path.relative(imagesRoot, coverFile.path).replace(/\\/g, '/');
+    meta.cover = `/images/posts/${relativePath}`;
     addOrUpdatePost(slug);
   }
 
-  // 同步标签索引
-  if (tags.length > 0) {
-    syncTagsForPost(slug, tags);
-  }
+  // 同步标签索引（增量对比新旧标签）
+  syncTagsForPost(slug, tags, oldTags);
 
   res.json({
     message: '文件上传成功',
@@ -143,7 +153,9 @@ router.post('/upload', verifyToken, upload.fields([
  */
 router.post('/upload-image', verifyToken, upload.single('image'), (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: '没有图片文件' });
-  const url = `/images/posts/${req.file.filename}`;
+  const imagesRoot = path.join(__dirname, '../data/posts/images');
+  const relativePath = path.relative(imagesRoot, req.file.path).replace(/\\/g, '/');
+  const url = `/images/posts/${relativePath}`;
   res.json({ url, filename: req.file.filename });
 });
 
@@ -355,8 +367,18 @@ router.put('/:slug', verifyToken, (req, res) => {
     return res.status(404).json({ error: '文章不存在' });
   }
 
+  // 读取旧标签
+  const index = readIndex();
+  const oldPost = index.posts.find(p => p.slug === slug);
+  const oldTags = oldPost?.tags || [];
+
   fs.writeFileSync(filePath, content, 'utf-8');
   const meta = addOrUpdatePost(slug);
+
+  // 同步标签
+  if (meta) {
+    syncTagsForPost(slug, meta.tags, oldTags);
+  }
 
   res.json({ message: '更新成功', slug, meta });
 });

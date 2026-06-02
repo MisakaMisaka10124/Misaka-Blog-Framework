@@ -82,3 +82,24 @@ export function getAllTags(): Array<{ tag: string; count: number }> {
 export function getPostsByTag(tag: string): string[] {
   return readTagIndex(tag).posts;
 }
+
+/** 从文章索引重建全部标签（启动时调用） */
+export function syncAllTags(posts: Array<{ slug: string; tags: string[] }>) {
+  ensureTagsDir();
+  const dir = TAGS_DIR();
+  // 清空旧的标签文件
+  const oldFiles = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+  oldFiles.forEach(f => fs.unlinkSync(path.join(dir, f)));
+
+  // 重建
+  const tagMap = new Map<string, string[]>();
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      if (!tagMap.has(tag)) tagMap.set(tag, []);
+      tagMap.get(tag)!.push(post.slug);
+    }
+  }
+  for (const [tag, slugs] of tagMap) {
+    writeTagIndex({ tag, posts: slugs });
+  }
+}
