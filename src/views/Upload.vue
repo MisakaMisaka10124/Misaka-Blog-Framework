@@ -58,9 +58,19 @@
             <label>标题</label>
             <input v-model="editTitle" type="text" placeholder="文章标题" required />
           </div>
-          <div class="upload__field">
+          <div class="upload__field" v-if="editSlug">
             <label>Slug</label>
-            <input v-model="editSlugDisplay" type="text" :disabled="!!editSlug" :placeholder="autoSlug" />
+            <input :value="editSlug" type="text" disabled />
+          </div>
+        </div>
+
+        <div class="upload__field">
+          <label>封面图片</label>
+          <div class="upload__cover-row">
+            <input ref="coverInputRef" type="file" accept="image/*" @change="handleCoverSelect" hidden />
+            <button type="button" class="upload__cover-btn" @click="coverInputRef?.click()">选择封面</button>
+            <span v-if="editCoverName" class="upload__cover-name">{{ editCoverName }}</span>
+            <span v-else class="upload__cover-hint">未选择</span>
           </div>
         </div>
 
@@ -165,6 +175,9 @@ const compressing = ref(false)
 
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
+const coverInputRef = ref<HTMLInputElement | null>(null)
+const editCoverFile = ref<File | null>(null)
+const editCoverName = ref('')
 
 const editStartTime = ref(0)
 const editDuration = ref(0)
@@ -188,10 +201,6 @@ function parseFrontmatter(raw: string) {
   }
   return { data, content }
 }
-
-const autoSlug = computed(() => {
-  return editTitle.value.toLowerCase().replace(/[^\w一-鿿]+/g, '-').replace(/^-|-$/g, '') || 'untitled'
-})
 
 const editorWordCount = computed(() => {
   return editContent.value.replace(/[#*`>\-\[\]()!\n]/g, ' ').replace(/\s+/g, ' ').trim().length
@@ -245,10 +254,20 @@ function startNew() {
   editContent.value = ''
   editSummary.value = ''
   editTags.value = []
+  editCoverFile.value = null
+  editCoverName.value = ''
   saveError.value = ''
   saveSuccess.value = ''
   editing.value = true
   startEditTimer()
+}
+
+function handleCoverSelect(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) {
+    editCoverFile.value = file
+    editCoverName.value = file.name
+  }
 }
 
 function cancelEdit() {
@@ -346,6 +365,8 @@ async function insertImage(file: File) {
     const compressed = await compressImage(file)
     const formData = new FormData()
     formData.append('image', compressed)
+    // 传递当前 slug（编辑已有文章时）或 _temp（新建文章时）
+    formData.append('slug', editSlug.value || '_temp')
     const { data } = await axios.post('/api/posts/upload-image', formData, {
       headers: { Authorization: `Bearer ${token.value}`, 'Content-Type': 'multipart/form-data' },
     })
@@ -364,20 +385,24 @@ async function handleSave() {
   saveError.value = ''; saveSuccess.value = ''; saveLoading.value = true
 
   try {
-    const slug = editSlug.value || autoSlug.value
     const frontmatter = ['---', `title: ${editTitle.value}`, `summary: ${editSummary.value || ''}`, `tags: [${editTags.value.join(', ')}]`, `date: ${new Date().toISOString().split('T')[0]}`, '---', ''].join('\n')
     const fullContent = frontmatter + editContent.value
 
     if (editSlug.value) {
+      // 编辑已有文章
       await axios.put(`/api/posts/${editSlug.value}`, { content: fullContent }, {
         headers: { Authorization: `Bearer ${token.value}` },
       })
       saveSuccess.value = '更新成功'
     } else {
-      const mdFile = new File([fullContent], `${slug}.md`, { type: 'text/markdown' })
+      // 新建文章 - slug 由后端自动生成
+      const mdFile = new File([fullContent], 'article.md', { type: 'text/markdown' })
       const formData = new FormData()
       formData.append('file', mdFile)
       formData.append('tags', editTags.value.join(','))
+      if (editCoverFile.value) {
+        formData.append('cover', editCoverFile.value)
+      }
       await axios.post('/api/posts/upload', formData, {
         headers: { Authorization: `Bearer ${token.value}`, 'Content-Type': 'multipart/form-data' },
       })
@@ -572,6 +597,37 @@ onUnmounted(() => { stopEditTimer() })
 }
 
 .upload__field input:disabled { opacity: 0.5; }
+
+.upload__cover-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.upload__cover-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-text-primary);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.upload__cover-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.upload__cover-name {
+  color: var(--color-accent);
+  font-size: 0.85em;
+}
+
+.upload__cover-hint {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}
 
 .upload__tags-input {
   display: flex;

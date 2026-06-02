@@ -5,21 +5,21 @@ import fs from 'fs';
 import path from 'path';
 import { buildIndex, readIndex, addOrUpdatePost, removePost } from '../services/post_index';
 import { syncTagsForPost } from '../services/tag';
+import { generateSlug } from '../utils/slug';
 
 const router = Router();
 const configPath = path.join(__dirname, '../data/config/core_server_config.json');
 const getConfig = () => JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
-// 配置 Multer 存储
+// 图片目录正则
+const IMAGE_RE = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+
+// 配置 Multer 存储（图片按 slug 分目录）
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.originalname);
-    if (isImage) {
-      // 图片按年月分目录: images/YYYY/MM/
-      const now = new Date();
-      const year = now.getFullYear().toString();
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const dir = path.join(__dirname, '../data/posts/images', year, month);
+    if (IMAGE_RE.test(file.originalname)) {
+      // 图片临时存到 images/_temp/，后续移动到 slug 目录
+      const dir = path.join(__dirname, '../data/posts/images/_temp');
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     } else {
@@ -29,12 +29,22 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.originalname);
-    const name = isImage ? `${Date.now()}-${file.originalname}` : file.originalname;
+    const name = IMAGE_RE.test(file.originalname)
+      ? `${Date.now()}-${file.originalname}`
+      : file.originalname;
     cb(null, name);
   }
 });
 const upload = multer({ storage });
+
+/** 将图片从临时目录移动到 slug 目录 */
+function moveImageToSlugDir(tempPath: string, slug: string, filename: string): string {
+  const slugDir = path.join(__dirname, '../data/posts/images', slug);
+  if (!fs.existsSync(slugDir)) fs.mkdirSync(slugDir, { recursive: true });
+  const destPath = path.join(slugDir, filename);
+  fs.renameSync(tempPath, destPath);
+  return `/images/posts/${slug}/${filename}`;
+}
 
 // JWT 校验中间件
 const verifyToken = (req: any, res: any, next: any) => {
@@ -92,36 +102,55 @@ router.post('/upload', verifyToken, upload.fields([
 
   const mdFile = files.file[0];
   const coverFile = files.cover?.[0];
-  const slug = mdFile.filename.replace(/\.md$/, '');
+
+  // 自动生成哈希 slug
+  const slug = generateSlug(mdFile.originalname);
+
+  // 将 md 文件重命名为 slug.md
+  const postsDir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+  const newMdPath = path.join(postsDir, `${slug}.md`);
+  fs.renameSync(mdFile.path, newMdPath);
+
+  // 将封面图移动到 slug 目录
+  let coverUrl: string | null = null;
+  if (coverFile) {
+    coverUrl = moveImageToSlugDir(coverFile.path, slug, coverFile.filename);
+  }
+
+  // 将 _temp 目录中的图片移动到 slug 目录
+  const tempDir = path.join(__dirname, '../data/posts/images/_temp');
+  if (fs.existsSync(tempDir)) {
+    const tempFiles = fs.readdirSync(tempDir);
+    for (const f of tempFiles) {
+      const tempPath = path.join(tempDir, f);
+      if (fs.statSync(tempPath).isFile()) {
+        moveImageToSlugDir(tempPath, slug, f);
+      }
+    }
+    // 清理空的 _temp 目录
+    try { fs.rmdirSync(tempDir); } catch {}
+  }
 
   // 处理标签
   const tagsStr = req.body.tags || '';
   const tags = tagsStr.split(',').map((t: string) => t.trim()).filter(Boolean);
 
-  // 读取旧标签（用于增量同步）
-  const index = readIndex();
-  const oldPost = index.posts.find(p => p.slug === slug);
-  const oldTags = oldPost?.tags || [];
-
   // 更新文章索引
   const meta = addOrUpdatePost(slug);
 
-  // 更新封面（如果上传了封面图片）
-  if (coverFile && meta) {
-    const imagesRoot = path.join(__dirname, '../data/posts/images');
-    const relativePath = path.relative(imagesRoot, coverFile.path).replace(/\\/g, '/');
-    meta.cover = `/images/posts/${relativePath}`;
+  // 更新封面路径
+  if (coverUrl && meta) {
+    meta.cover = coverUrl;
     addOrUpdatePost(slug);
   }
 
-  // 同步标签索引（增量对比新旧标签）
-  syncTagsForPost(slug, tags, oldTags);
+  // 同步标签索引
+  syncTagsForPost(slug, tags, []);
 
   res.json({
     message: '文件上传成功',
-    filename: mdFile.filename,
     slug,
-    cover: coverFile?.filename || null,
+    cover: coverUrl,
     tags,
     meta
   });
@@ -153,9 +182,8 @@ router.post('/upload', verifyToken, upload.fields([
  */
 router.post('/upload-image', verifyToken, upload.single('image'), (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: '没有图片文件' });
-  const imagesRoot = path.join(__dirname, '../data/posts/images');
-  const relativePath = path.relative(imagesRoot, req.file.path).replace(/\\/g, '/');
-  const url = `/images/posts/${relativePath}`;
+  const slug = req.body.slug || '_temp';
+  const url = moveImageToSlugDir(req.file.path, slug, req.file.filename);
   res.json({ url, filename: req.file.filename });
 });
 

@@ -80,16 +80,16 @@ function handleMouseMove(e: MouseEvent) {
   if (cursorRef.value) {
     cursorRef.value.style.left = `${e.clientX}px`
     cursorRef.value.style.top = `${e.clientY}px`
-    cursorRef.value.style.opacity = '1'
+    cursorRef.value.style.display = 'block'
   }
 }
 
 function handleMouseLeave() {
-  if (cursorRef.value) cursorRef.value.style.opacity = '0'
+  if (cursorRef.value) cursorRef.value.style.display = 'none'
 }
 
 function handleMouseEnter() {
-  if (cursorRef.value) cursorRef.value.style.opacity = '1'
+  if (cursorRef.value) cursorRef.value.style.display = 'block'
 }
 
 // 加载配置
@@ -138,25 +138,25 @@ onUnmounted(() => {
 
 .custom-cursor {
   position: fixed;
+  top: 0;
+  left: 0;
   width: 32px;
   height: 32px;
   pointer-events: none;
   z-index: 99999;
   transform: translate(-50%, -50%);
   background-image: url('/images/cursor.png');
-  background-size: contain;
+  background-size: 32px 32px;
   background-repeat: no-repeat;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  display: none;
 }
 
 @media (pointer: fine) {
-  .app-layout {
-    cursor: none;
+  * {
+    cursor: none !important;
   }
-  .app-layout a,
-  .app-layout button {
-    cursor: none;
+  .custom-cursor {
+    display: block;
   }
 }
 </style>
