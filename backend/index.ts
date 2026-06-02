@@ -110,11 +110,23 @@ app.get('/api/friendlinks', (req, res) => {
 // 静态文件：文章图片
 app.use('/images/posts', express.static(path.join(__dirname, './data/posts/images')));
 
+// API 路由
 app.use('/api', apiRouter);
+
+// 前端静态文件（生产模式）
+const distPath = path.join(__dirname, '../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  // SPA 回退：非 API、非图片、非文档的路由都返回 index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+  console.log(`Frontend served from: ${distPath}`);
+}
 
 const port = serverConfig.server.port;
 app.listen(port, async () => {
-  console.log(`Backend running on http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${port}`);
   console.log(`Swagger Docs: http://localhost:${port}/api-docs`);
 
   // 启动时构建文章索引并同步标签
