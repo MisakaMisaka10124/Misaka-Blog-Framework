@@ -1,0 +1,62 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('../views/Home.vue'),
+    },
+    {
+      path: '/categories',
+      name: 'categories',
+      component: () => import('../views/Categories.vue'),
+    },
+    {
+      path: '/categories/:tag',
+      name: 'category-detail',
+      component: () => import('../views/CategoryDetail.vue'),
+    },
+    {
+      path: '/post/:slug',
+      name: 'post',
+      component: () => import('../views/PostDetail.vue'),
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('../views/About.vue'),
+    },
+    {
+      path: '/friends',
+      name: 'friends',
+      component: () => import('../views/Friends.vue'),
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/Login.vue'),
+    },
+    {
+      path: '/upload',
+      name: 'upload',
+      component: () => import('../views/Upload.vue'),
+      beforeEnter: () => {
+        if (!localStorage.getItem('upload_token')) return { name: 'login' }
+      },
+    },
+    {
+      path: '/search',
+      name: 'search',
+      component: () => import('../views/Search.vue'),
+    },
+  ],
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, behavior: 'smooth', top: 80 }
+    return { top: 0 }
+  },
+})
+
+export default router

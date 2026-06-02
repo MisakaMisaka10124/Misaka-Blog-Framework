@@ -1,0 +1,45 @@
+{
+  "siteTitle": "Misaka10124の空间",
+  "welcomeMessage": "你好，欢迎来到我的空间！",
+  "chatPlaceholder": "有什么想问 AI 的吗？",
+  "about": "你的个人简介，会显示在首页左侧卡片中。",
+  "navLinks": [
+    {"label": "首页", "path": "/"},
+    {"label": "博客", "path": "/categories"},
+    {"label": "友链", "path": "/friends"},
+    {"label": "关于", "path": "/about"}
+  ],
+  "socialLinks": [
+    {"platform": "github", "url": "https://github.com/YOUR_USERNAME", "icon": "github"},
+    {"platform": "bilibili", "url": "https://space.bilibili.com/YOUR_ID", "icon": "bilibili"},
+    {"platform": "twitter", "url": "https://x.com/YOUR_HANDLE", "icon": "twitter"},
+    {"platform": "email", "url": "your@email.com", "icon": "email"}
+  ],
+  "footer": {
+    "copyright": "2026 Misaka10124",
+    "icp": ""
+  },
+  "hero": {
+    "subtitle": "你的个性签名",
+    "backgroundImages": [
+      "/images/morning.jpg",
+      "/images/noon.jpg",
+      "/images/evening.jpg",
+      "/images/night.jpg"
+    ]
+  },
+  "friendLinks": [
+    {
+      "name": "不正经の人Y",
+      "avatar": "/images/friends/Bzjdry.jpg",
+      "desc": "数码爱好者",
+      "url": "https://my.anontokyo.cc"
+    },
+    {
+      "name": "MisakaE",
+      "avatar": "/images/friends/MisakaE.jpg",
+      "desc": "CTF大手子",
+      "url": "https://misakae.live"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "siteTitle": "Misaka's Personal Website",
+  "welcomeMessage": "Hello, welcome to my space!",
+  "chatPlaceholder": "Ask AI anything?",
+  "about": "A developer who loves tech and anime, always tinkering with interesting things.",
+  "navLinks": [
+    {"label": "Home", "path": "/"},
+    {"label": "Blog", "path": "/categories"},
+    {"label": "Friends", "path": "/friends"},
+    {"label": "About", "path": "/about"}
+  ],
+  "socialLinks": [
+    {"platform": "github", "url": "https://github.com/MisakaMisaka10124", "icon": "github"},
+    {"platform": "bilibili", "url": "https://space.bilibili.com/", "icon": "bilibili"},
+    {"platform": "twitter", "url": "https://x.com/", "icon": "twitter"},
+    {"platform": "email", "url": "misaka@example.com", "icon": "email"}
+  ],
+  "footer": {
+    "copyright": "2026 Misaka10124",
+    "icp": ""
+  },
+  "hero": {
+    "subtitle": "The light dancing on your fingertips is my eternal faith!",
+    "backgroundImages": [
+      "/images/morning.jpg",
+      "/images/noon.jpg",
+      "/images/evening.jpg",
+      "/images/night.jpg"
+    ]
+  },
+  "friendLinks": [
+    {
+      "name": "Bzjdry",
+      "avatar": "/images/friends/Bzjdry.jpg",
+      "desc": "Digital enthusiast",
+      "url": "https://my.anontokyo.cc"
+    },
+    {
+      "name": "MisakaE",
+      "avatar": "/images/friends/MisakaE.jpg",
+      "desc": "CTF Expert",
+      "url": "https://misakae.live"
+    },
+    {
+      "name": "SukunaW",
+      "avatar": "/images/friends/SukunaW.jpg",
+      "desc": "HUST Master",
+      "url": "https://sukunahust.moe"
+    },
+    {
+      "name": "Xingjian",
+      "avatar": "/images/friends/Xingjian.jpg",
+      "desc": "Music Producer",
+      "url": "https://space.bilibili.com/"
+    }
+  ]
+}

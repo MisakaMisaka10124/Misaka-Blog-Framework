@@ -1,0 +1,44 @@
+{
+  "server": {
+    "port": 3000,
+    "frontend_dir": "../src/views"
+  },
+  "admin": {
+    "username": "admin",
+    "password": "YOUR_PASSWORD_HERE"
+  },
+  "jwt": {
+    "secret": "YOUR_JWT_SECRET_HERE",
+    "expires_in": "24h"
+  },
+  "captcha": {
+    "size": 4,
+    "noise": 2,
+    "color": true,
+    "background": "#f0f0f0",
+    "expires_in_ms": 300000
+  },
+  "rate_limit": {
+    "ai_chat": {
+      "window_ms": 3600000,
+      "max_requests": 30,
+      "message": "当前IP发送过多请求，请稍后再试。"
+    }
+  },
+  "paths": {
+    "posts_dir": "./data/posts/",
+    "ai_knowledge": "./ai_knowlage.json",
+    "site_config": "./site_config.json"
+  },
+  "ai": {
+    "base_url": "https://your-ai-api-endpoint.com/v1",
+    "api_key": "YOUR_API_KEY_HERE",
+    "model": "YOUR_MODEL_NAME",
+    "fallback_prompt": "你是一个友好的助手。",
+    "simulate_reply": false
+  },
+  "marked_options": {
+    "gfm": true,
+    "breaks": true
+  }
+}

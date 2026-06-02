@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+
+# Actual JSON config files (not templates)
+backend/data/config/core_server_config.json
+backend/data/config/post_index.json
+backend/data/config/tags/*.json
+backend/data/langrage/site_config_en_us.json
+backend/data/langrage/site_config_zh_cn.json
+backend/data/langrage/site_config_zh_hk.json
+
+# Actual blog posts & uploaded images
+backend/data/posts/*.md
+backend/data/posts/images/
+
+# Legacy project (reference only)
+personal-web-set_副本/
+
+# OS
+.DS_Store
+*.local

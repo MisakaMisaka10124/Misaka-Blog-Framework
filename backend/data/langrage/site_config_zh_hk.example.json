@@ -1,0 +1,57 @@
+{
+  "siteTitle": "Misaka10124の空間",
+  "welcomeMessage": "你好，歡迎來到我的空間！",
+  "chatPlaceholder": "有什麼想問 AI 的嗎？",
+  "about": "一個熱愛技術與二次元的開發者，喜歡折騰各種有趣的東西。",
+  "navLinks": [
+    {"label": "首頁", "path": "/"},
+    {"label": "博客", "path": "/categories"},
+    {"label": "友鏈", "path": "/friends"},
+    {"label": "關於", "path": "/about"}
+  ],
+  "socialLinks": [
+    {"platform": "github", "url": "https://github.com/MisakaMisaka10124", "icon": "github"},
+    {"platform": "bilibili", "url": "https://space.bilibili.com/", "icon": "bilibili"},
+    {"platform": "twitter", "url": "https://x.com/", "icon": "twitter"},
+    {"platform": "email", "url": "misaka@example.com", "icon": "email"}
+  ],
+  "footer": {
+    "copyright": "2026 Misaka10124",
+    "icp": ""
+  },
+  "hero": {
+    "subtitle": "君指尖躍動の光は、私の一生不變の信仰に、唯私の超電磁砲永世生き！",
+    "backgroundImages": [
+      "/images/morning.jpg",
+      "/images/noon.jpg",
+      "/images/evening.jpg",
+      "/images/night.jpg"
+    ]
+  },
+  "friendLinks": [
+    {
+      "name": "不正經の人Y",
+      "avatar": "/images/friends/Bzjdry.jpg",
+      "desc": "數碼愛好者",
+      "url": "https://my.anontokyo.cc"
+    },
+    {
+      "name": "MisakaE",
+      "avatar": "/images/friends/MisakaE.jpg",
+      "desc": "CTF大手子",
+      "url": "https://misakae.live"
+    },
+    {
+      "name": "SukunaW",
+      "avatar": "/images/friends/SukunaW.jpg",
+      "desc": "華中科技大學本碩",
+      "url": "https://sukunahust.moe"
+    },
+    {
+      "name": "星澗",
+      "avatar": "/images/friends/Xingjian.jpg",
+      "desc": "音樂製作人",
+      "url": "https://space.bilibili.com/"
+    }
+  ]
+}
