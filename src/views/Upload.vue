@@ -81,13 +81,28 @@
               {{ tag }}
               <button type="button" class="upload__tag-remove" @click="removeTag(i)">×</button>
             </span>
-            <input
-              v-model="newTag"
-              type="text"
-              class="upload__tag-field"
-              placeholder="输入标签后回车"
-              @keydown.enter.prevent="addTag"
-            />
+            <div class="upload__tag-input-wrap">
+              <input
+                v-model="newTag"
+                type="text"
+                class="upload__tag-field"
+                placeholder="输入标签后回车"
+                @keydown.enter.prevent="addTag"
+                @input="onTagInput"
+                @focus="onTagInput"
+                @blur="hideTagSuggestions"
+              />
+              <div class="upload__tag-suggestions" v-if="tagSuggestions.length">
+                <div
+                  v-for="s in tagSuggestions"
+                  :key="s"
+                  class="upload__tag-suggestion"
+                  @mousedown.prevent="selectTag(s)"
+                >
+                  {{ s }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -178,6 +193,8 @@ const imageInputRef = ref<HTMLInputElement | null>(null)
 const coverInputRef = ref<HTMLInputElement | null>(null)
 const editCoverFile = ref<File | null>(null)
 const editCoverName = ref('')
+const allTags = ref<string[]>([])
+const tagSuggestions = ref<string[]>([])
 
 const editStartTime = ref(0)
 const editDuration = ref(0)
@@ -240,6 +257,8 @@ async function startEdit(slug: string) {
     editSummary.value = fm.summary || ''
     editTags.value = Array.isArray(fm.tags) ? fm.tags : []
     editContent.value = parsed.content
+    editCoverFile.value = null
+    editCoverName.value = data.meta?.cover ? data.meta.cover.split('/').pop() : ''
     editing.value = true
     startEditTimer()
   } catch (e: any) {
@@ -293,10 +312,36 @@ function addTag() {
   const tag = newTag.value.trim()
   if (tag && !editTags.value.includes(tag)) editTags.value.push(tag)
   newTag.value = ''
+  tagSuggestions.value = []
 }
 
 function removeTag(index: number) {
   editTags.value.splice(index, 1)
+}
+
+function onTagInput() {
+  const q = newTag.value.trim().toLowerCase()
+  if (!q) { tagSuggestions.value = []; return }
+  tagSuggestions.value = allTags.value
+    .filter(t => t.toLowerCase().includes(q) && !editTags.value.includes(t))
+    .slice(0, 8)
+}
+
+function selectTag(tag: string) {
+  if (!editTags.value.includes(tag)) editTags.value.push(tag)
+  newTag.value = ''
+  tagSuggestions.value = []
+}
+
+function hideTagSuggestions() {
+  setTimeout(() => { tagSuggestions.value = [] }, 150)
+}
+
+async function loadAllTags() {
+  try {
+    const { data } = await axios.get('/api/tags')
+    allTags.value = (data.tags || []).map((t: any) => t.tag)
+  } catch {}
 }
 
 // ========== 编辑器工具 ==========
@@ -389,9 +434,14 @@ async function handleSave() {
     const fullContent = frontmatter + editContent.value
 
     if (editSlug.value) {
-      // 编辑已有文章
-      await axios.put(`/api/posts/${editSlug.value}`, { content: fullContent }, {
-        headers: { Authorization: `Bearer ${token.value}` },
+      // 编辑已有文章 - 使用 FormData 支持封面上传
+      const formData = new FormData()
+      formData.append('content', fullContent)
+      if (editCoverFile.value) {
+        formData.append('cover', editCoverFile.value)
+      }
+      await axios.put(`/api/posts/${editSlug.value}`, formData, {
+        headers: { Authorization: `Bearer ${token.value}`, 'Content-Type': 'multipart/form-data' },
       })
       saveSuccess.value = '更新成功'
     } else {
@@ -436,6 +486,7 @@ function logout() {
 
 onMounted(() => {
   loadArticles()
+  loadAllTags()
 })
 
 onUnmounted(() => { stopEditTimer() })
@@ -671,6 +722,48 @@ onUnmounted(() => { stopEditTimer() })
   border: none !important;
   padding: 2px 0 !important;
   font-size: 0.9em;
+}
+
+.upload__tag-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 80px;
+}
+
+.upload__tag-input-wrap .upload__tag-field {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 4px 8px !important;
+}
+
+.upload__tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(30, 30, 50, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.upload__tag-suggestion {
+  padding: 8px 12px;
+  font-size: 0.85em;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.upload__tag-suggestion:hover {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--color-accent);
 }
 
 .upload__editor-toolbar {

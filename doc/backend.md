@@ -24,7 +24,8 @@ backend/
 │   └── tag.ts              # 标签索引管理
 ├── utils/                  # 工具函数
 │   ├── md_html.ts          # Markdown 渲染器
-│   └── verify.ts           # 验证码生成
+│   ├── verify.ts           # 验证码生成
+│   └── slug.ts             # 哈希 slug 生成器
 ├── types/                  # TypeScript 类型定义
 └── data/                   # 数据目录
     ├── config/             # 配置文件
@@ -33,13 +34,10 @@ backend/
     │   ├── post_index.json           # 文章索引（自动生成）
     │   └── tags/                     # 标签索引目录
     ├── langrage/           # 多语言配置
-    │   ├── site_config_zh_cn.json
-    │   ├── site_config_en_us.json
-    │   └── site_config_zh_hk.json
     └── posts/              # 文章存储
         ├── *.md            # Markdown 文件
-        └── images/         # 上传图片（按月分目录）
-            └── YYYY/MM/    # 年/月子目录
+        └── images/         # 上传图片（按 slug 分目录）
+            └── {slug}/     # 每篇文章独立目录
 ```
 
 ## 启动流程
@@ -55,14 +53,35 @@ backend/
 
 ## 核心模块
 
-### 1. 文章索引 (post_index.ts)
+### 1. Slug 生成器 (slug.ts)
+
+**职责**: 生成文章唯一标识符
+
+**算法**: 基于文件名 + 时间戳的 SHA-256 哈希，取前 8 位
+
+```typescript
+import crypto from 'crypto';
+
+export function generateSlug(filename: string): string {
+  const timestamp = Date.now().toString();
+  const raw = `${filename}-${timestamp}`;
+  return crypto.createHash('sha256').update(raw).digest('hex').substring(0, 8);
+}
+```
+
+**特点**:
+- 8 位十六进制字符（约 43 亿种组合）
+- 基于文件名和时间戳，保证唯一性
+- 不可逆，无法从 slug 推断原始文件名
+
+### 2. 文章索引 (post_index.ts)
 
 **职责**: 管理文章元数据的增删改查
 
 **数据结构** (`PostMeta`):
 ```typescript
 interface PostMeta {
-  slug: string;        // 文件名（不含 .md）
+  slug: string;        // 哈希 slug
   title: string;       // 标题（frontmatter > H1 > slug）
   summary: string;     // 简介（frontmatter > 正文前 200 字）
   cover: string;       // 封面图 URL
@@ -80,14 +99,7 @@ interface PostMeta {
 - `addOrUpdatePost(slug)`: 增量更新单篇文章
 - `removePost(slug)`: 从索引中移除文章
 
-**元数据提取规则**:
-1. 标题: frontmatter.title > 首行 H1 > slug
-2. 简介: frontmatter.summary > frontmatter.description > 正文前 200 字
-3. 日期: frontmatter.date > 文件修改时间
-4. 字数: 去除 Markdown 标记后的字符数
-5. 阅读时间: max(1, ceil(字数 / 500)) 分钟
-
-### 2. 标签系统 (tag.ts)
+### 3. 标签系统 (tag.ts)
 
 **职责**: 管理标签与文章的关联关系
 
@@ -104,39 +116,20 @@ interface TagIndex {
 **核心函数**:
 - `addTagToPost(tag, slug)`: 将文章添加到标签
 - `removeTagFromPost(tag, slug)`: 从标签中移除文章
-- `syncTagsForPost(slug, newTags, oldTags)`: 增量同步标签（对比新旧）
+- `syncTagsForPost(slug, newTags, oldTags)`: 增量同步标签
 - `syncAllTags(posts)`: 从文章索引重建全部标签（启动时调用）
 - `getAllTags()`: 获取所有标签及其文章数量
 - `getPostsByTag(tag)`: 获取某标签下的文章列表
 
-**文件名安全处理**: 将标签名中的特殊字符替换为下划线
+### 4. 图片管理
 
-### 3. 验证码 (verify.ts)
+**存储结构**: `backend/data/posts/images/{slug}/`
 
-**职责**: 生成和验证图形验证码
-
-**技术**: svg-captcha
-
-**流程**:
-1. `generateCaptcha()`: 生成 SVG 验证码，返回 `{ id, data }`
-2. 前端显示 SVG，用户输入验证码
-3. `verifyCaptcha(id, text)`: 验证用户输入
-
-### 4. Markdown 渲染 (md_html.ts)
-
-**职责**: 将 Markdown 转换为 HTML
-
-**技术栈**:
-- marked v18: Markdown 解析
-- marked-highlight: 代码高亮扩展
-- highlight.js: 语法高亮引擎（github-dark 主题）
-- gray-matter: frontmatter 解析
-
-**处理流程**:
-1. 使用 gray-matter 剥离 frontmatter
-2. 使用 marked 解析 Markdown
-3. 使用 highlight.js 高亮代码块
-4. 返回渲染后的 HTML
+**核心函数**:
+- `moveImageToSlugDir(tempPath, slug, filename)`: 移动图片到 slug 目录
+- `moveTempImagesToSlug(slug)`: 将 _temp 目录图片移到 slug 目录
+- `removeImageDir(slug)`: 删除 slug 对应的图片目录
+- `writeFrontmatterField(slug, field, value)`: 写入/更新 frontmatter 字段
 
 ## API 路由详解
 
@@ -150,19 +143,19 @@ interface TagIndex {
   - `cover`: 封面图片（可选）
   - `tags`: 标签（逗号分隔）
 - **处理**:
-  1. 保存文件到 `data/posts/`
-  2. 提取元数据，更新索引
-  3. 同步标签索引
-- **返回**: `{ message, filename, slug, cover, tags, meta }`
+  1. 自动生成哈希 slug
+  2. 保存 md 文件为 `{slug}.md`
+  3. 封面图移动到 `images/{slug}/` 并写入 frontmatter
+  4. _temp 图片移动到 slug 目录
+  5. 更新索引，同步标签
+- **返回**: `{ message, slug, cover, tags, meta }`
 
 #### POST /api/posts/upload-image
 - **认证**: JWT
 - **功能**: 上传文章内图片
 - **参数**: multipart/form-data
   - `image`: 图片文件
-- **处理**:
-  1. 按月分目录存储: `images/YYYY/MM/`
-  2. 返回图片 URL
+  - `slug`: 文章 slug（图片存入对应目录）
 - **返回**: `{ url, filename }`
 
 #### GET /api/posts/search
@@ -173,26 +166,17 @@ interface TagIndex {
   - `tag`: 标签过滤
 - **返回**: `{ posts: PostMeta[], total: number }`
 
-#### GET /api/posts/index
-- **认证**: 无
-- **功能**: 获取全局文章索引
-- **返回**: `{ posts: PostMeta[], lastUpdated: string }`
-
-#### GET /api/posts/:slug
-- **认证**: 无
-- **功能**: 获取文章详情
-- **返回**: `{ meta: PostMeta, content: string }`
-
 #### PUT /api/posts/:slug
 - **认证**: JWT
-- **功能**: 更新文章内容
-- **参数**: JSON body
+- **功能**: 更新文章内容和可选封面
+- **参数**: multipart/form-data
   - `content`: 完整的 Markdown 内容（含 frontmatter）
+  - `cover`: 新的封面图片（可选）
 - **处理**:
   1. 读取旧标签
   2. 写入新内容
-  3. 更新索引
-  4. 增量同步标签
+  3. 如果有新封面，移动到 slug 目录并更新 frontmatter
+  4. 更新索引，增量同步标签
 - **返回**: `{ message, slug, meta }`
 
 #### DELETE /api/posts/:slug
@@ -202,12 +186,8 @@ interface TagIndex {
   1. 移除所有标签关联
   2. 从索引中移除
   3. 删除 .md 文件
+  4. 删除图片目录 `images/{slug}/`
 - **返回**: `{ message, slug }`
-
-#### POST /api/posts/reindex
-- **认证**: JWT
-- **功能**: 重建文章索引
-- **返回**: `{ message, count }`
 
 ### 标签路由 (tags.ts)
 
@@ -220,32 +200,6 @@ interface TagIndex {
 - **认证**: 无
 - **功能**: 获取标签下的文章列表
 - **返回**: `{ tag, posts: PostMeta[] }`
-
-### 登录路由 (login.ts)
-
-#### GET /api/captcha
-- **认证**: 无
-- **功能**: 获取验证码
-- **返回**: `{ id, data }` (data 为 SVG 字符串)
-
-#### POST /api/login
-- **认证**: 无
-- **功能**: 用户登录
-- **参数**: JSON body
-  - `username`: 用户名
-  - `password`: 密码
-  - `captchaId`: 验证码 ID
-  - `captchaText`: 验证码文本
-- **返回**: `{ token }`
-
-### Markdown 路由 (md_html.ts)
-
-#### POST /api/md/render
-- **认证**: 无
-- **功能**: 渲染 Markdown 为 HTML
-- **参数**: JSON body
-  - `markdown`: Markdown 文本
-- **返回**: `{ html }`
 
 ## 认证机制
 
@@ -266,9 +220,10 @@ interface TagIndex {
 
 1. **前端压缩**: Canvas API 压缩（最大 1920px，JPEG 82% 质量）
 2. **上传**: multipart/form-data 发送到后端
-3. **存储**: 按月分目录 `images/YYYY/MM/timestamp-filename.ext`
-4. **返回**: 图片 URL `/images/posts/YYYY/MM/filename.ext`
-5. **引用**: 在 Markdown 中使用 `![alt](url)`
+3. **临时存储**: 存入 `images/_temp/` 目录
+4. **移动**: 根据 slug 移动到 `images/{slug}/` 目录
+5. **返回**: 图片 URL `/images/posts/{slug}/filename.ext`
+6. **引用**: 在 Markdown 中使用 `![alt](url)`
 
 ## 错误处理
 
@@ -276,10 +231,3 @@ interface TagIndex {
 - 401: 未认证（无 token 或 token 无效）
 - 404: 资源不存在
 - 500: 服务器内部错误
-
-## 数据安全
-
-- 实际配置文件通过 .gitignore 排除
-- 示例配置文件 (.example.json) 提供模板
-- JWT 密钥通过环境变量或配置文件管理
-- 验证码一次性使用

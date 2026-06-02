@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import { buildIndex, readIndex, addOrUpdatePost, removePost } from '../services/post_index';
-import { syncTagsForPost } from '../services/tag';
+import { syncTagsForPost, getAllTags } from '../services/tag';
 import { generateSlug } from '../utils/slug';
 
 const router = Router();
@@ -18,7 +18,6 @@ const IMAGE_RE = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (IMAGE_RE.test(file.originalname)) {
-      // 图片临时存到 images/_temp/，后续移动到 slug 目录
       const dir = path.join(__dirname, '../data/posts/images/_temp');
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
@@ -46,6 +45,58 @@ function moveImageToSlugDir(tempPath: string, slug: string, filename: string): s
   return `/images/posts/${slug}/${filename}`;
 }
 
+/** 将 _temp 目录中的图片移动到 slug 目录 */
+function moveTempImagesToSlug(slug: string) {
+  const tempDir = path.join(__dirname, '../data/posts/images/_temp');
+  if (!fs.existsSync(tempDir)) return;
+  const tempFiles = fs.readdirSync(tempDir);
+  for (const f of tempFiles) {
+    const tempPath = path.join(tempDir, f);
+    if (fs.statSync(tempPath).isFile()) {
+      moveImageToSlugDir(tempPath, slug, f);
+    }
+  }
+  try { fs.rmdirSync(tempDir); } catch {}
+}
+
+/** 删除 slug 对应的图片目录 */
+function removeImageDir(slug: string) {
+  const slugDir = path.join(__dirname, '../data/posts/images', slug);
+  if (fs.existsSync(slugDir)) {
+    fs.rmSync(slugDir, { recursive: true, force: true });
+  }
+}
+
+/** 读取 md 文件并写入/更新 frontmatter 字段 */
+function writeFrontmatterField(slug: string, field: string, value: string) {
+  const postsDir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+  const filePath = path.join(postsDir, `${slug}.md`);
+  if (!fs.existsSync(filePath)) return;
+
+  let content = fs.readFileSync(filePath, 'utf-8');
+  const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+
+  if (fmMatch) {
+    const fmBody = fmMatch[1];
+    const rest = content.slice(fmMatch[0].length);
+    const lines = fmBody.split('\n');
+    let found = false;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith(`${field}:`)) {
+        lines[i] = `${field}: ${value}`;
+        found = true;
+        break;
+      }
+    }
+    if (!found) lines.push(`${field}: ${value}`);
+    content = `---\n${lines.join('\n')}\n---\n${rest}`;
+  } else {
+    content = `---\n${field}: ${value}\n---\n${content}`;
+  }
+
+  fs.writeFileSync(filePath, content, 'utf-8');
+}
+
 // JWT 校验中间件
 const verifyToken = (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -65,7 +116,7 @@ const verifyToken = (req: any, res: any, next: any) => {
  *   post:
  *     tags: [Posts]
  *     summary: 上传 Markdown 文章及封面图片
- *     description: 上传 .md 文件和可选的封面图片，自动更新文章索引和标签索引
+ *     description: 上传 .md 文件和可选的封面图片，自动生成 slug，更新索引和标签
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -115,34 +166,19 @@ router.post('/upload', verifyToken, upload.fields([
   let coverUrl: string | null = null;
   if (coverFile) {
     coverUrl = moveImageToSlugDir(coverFile.path, slug, coverFile.filename);
+    // 写入 frontmatter
+    writeFrontmatterField(slug, 'cover', coverUrl);
   }
 
   // 将 _temp 目录中的图片移动到 slug 目录
-  const tempDir = path.join(__dirname, '../data/posts/images/_temp');
-  if (fs.existsSync(tempDir)) {
-    const tempFiles = fs.readdirSync(tempDir);
-    for (const f of tempFiles) {
-      const tempPath = path.join(tempDir, f);
-      if (fs.statSync(tempPath).isFile()) {
-        moveImageToSlugDir(tempPath, slug, f);
-      }
-    }
-    // 清理空的 _temp 目录
-    try { fs.rmdirSync(tempDir); } catch {}
-  }
+  moveTempImagesToSlug(slug);
 
   // 处理标签
   const tagsStr = req.body.tags || '';
   const tags = tagsStr.split(',').map((t: string) => t.trim()).filter(Boolean);
 
-  // 更新文章索引
+  // 更新文章索引（在写入 cover 之后，这样索引能读到 cover）
   const meta = addOrUpdatePost(slug);
-
-  // 更新封面路径
-  if (coverUrl && meta) {
-    meta.cover = coverUrl;
-    addOrUpdatePost(slug);
-  }
 
   // 同步标签索引
   syncTagsForPost(slug, tags, []);
@@ -162,7 +198,7 @@ router.post('/upload', verifyToken, upload.fields([
  *   post:
  *     tags: [Posts]
  *     summary: 上传文章内图片
- *     description: 上传单张图片，返回可访问的 URL
+ *     description: 上传单张图片到指定 slug 目录，返回可访问的 URL
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -174,6 +210,9 @@ router.post('/upload', verifyToken, upload.fields([
  *               image:
  *                 type: string
  *                 format: binary
+ *               slug:
+ *                 type: string
+ *                 description: 文章 slug（图片存入对应目录）
  *     responses:
  *       200:
  *         description: 上传成功，返回图片 URL
@@ -317,7 +356,7 @@ router.get('/:slug', (req, res) => {
  *   delete:
  *     tags: [Posts]
  *     summary: 删除文章
- *     description: 删除指定文章并清理索引
+ *     description: 删除指定文章、图片目录并清理索引
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -339,13 +378,16 @@ router.delete('/:slug', verifyToken, (req, res) => {
   const index = readIndex();
   const meta = index.posts.find(p => p.slug === slug);
   if (meta) {
-    syncTagsForPost(slug, [], meta.tags); // 移除所有标签关联
+    syncTagsForPost(slug, [], meta.tags);
   }
 
   const removed = removePost(slug);
   if (!removed) {
     return res.status(404).json({ error: '文章不存在' });
   }
+
+  // 删除图片目录
+  removeImageDir(slug);
 
   res.json({ message: '文章删除成功', slug });
 });
@@ -355,8 +397,8 @@ router.delete('/:slug', verifyToken, (req, res) => {
  * /api/posts/{slug}:
  *   put:
  *     tags: [Posts]
- *     summary: 更新文章内容
- *     description: 更新指定文章的 Markdown 内容，重新提取元数据
+ *     summary: 更新文章
+ *     description: 更新文章内容和可选的封面图片
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -368,7 +410,7 @@ router.delete('/:slug', verifyToken, (req, res) => {
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required: [content]
@@ -376,13 +418,17 @@ router.delete('/:slug', verifyToken, (req, res) => {
  *               content:
  *                 type: string
  *                 description: 完整的 Markdown 内容（含 frontmatter）
+ *               cover:
+ *                 type: string
+ *                 format: binary
+ *                 description: 新的封面图片（可选）
  *     responses:
  *       200:
  *         description: 更新成功
  *       404:
  *         description: 文章不存在
  */
-router.put('/:slug', verifyToken, (req, res) => {
+router.put('/:slug', verifyToken, upload.single('cover'), (req: any, res) => {
   const { slug } = req.params;
   const { content } = req.body;
 
@@ -400,7 +446,16 @@ router.put('/:slug', verifyToken, (req, res) => {
   const oldPost = index.posts.find(p => p.slug === slug);
   const oldTags = oldPost?.tags || [];
 
+  // 写入新内容
   fs.writeFileSync(filePath, content, 'utf-8');
+
+  // 如果上传了新封面，移动到 slug 目录并更新 frontmatter
+  if (req.file) {
+    const coverUrl = moveImageToSlugDir(req.file.path, slug, req.file.filename);
+    writeFrontmatterField(slug, 'cover', coverUrl);
+  }
+
+  // 更新索引
   const meta = addOrUpdatePost(slug);
 
   // 同步标签

@@ -23,9 +23,10 @@
 ## 功能特性
 
 - 文章管理：上传、编辑、删除 Markdown 文章
-- 标签系统：基于独立 JSON 文件的标签索引
+- 哈希 Slug：基于 SHA-256 自动生成 8 位唯一标识
+- 标签系统：独立 JSON 文件存储，支持自动补全
 - 全文搜索：支持标题、简介、标签关键字搜索
-- 图片上传：客户端压缩 + 服务端按月分目录存储
+- 图片管理：按文章 slug 分目录存储，支持封面图
 - 多语言：中文简体 / 中文繁体 / English
 - 深色模式：自动跟随系统主题
 - 响应式布局：适配桌面端和移动端
@@ -51,10 +52,7 @@ npm install
 复制示例配置文件并修改为实际配置：
 
 ```bash
-# 服务端配置
 cp backend/data/config/core_server_config.example.json backend/data/config/core_server_config.json
-
-# 站点配置（多语言）
 cp backend/data/langrage/site_config_zh_cn.example.json backend/data/langrage/site_config_zh_cn.json
 cp backend/data/langrage/site_config_en_us.example.json backend/data/langrage/site_config_en_us.json
 cp backend/data/langrage/site_config_zh_hk.example.json backend/data/langrage/site_config_zh_hk.json
@@ -63,11 +61,8 @@ cp backend/data/langrage/site_config_zh_hk.example.json backend/data/langrage/si
 ### 启动开发服务器
 
 ```bash
-# 启动后端（端口 3000）
-npm run dev:server
-
-# 启动前端（端口 5173，自动代理到后端）
-npm run dev
+npm run dev:server   # 启动后端（端口 3000）
+npm run dev          # 启动前端（端口 5173）
 ```
 
 ### 构建生产版本
@@ -83,50 +78,51 @@ personal_web/
 ├── backend/                    # 后端代码
 │   ├── index.ts               # Express 服务入口
 │   ├── routes/                # API 路由
-│   │   ├── index.ts           # 路由聚合
-│   │   ├── posts.ts           # 文章 CRUD + 搜索
-│   │   ├── tags.ts            # 标签查询
-│   │   ├── login.ts           # 登录认证
-│   │   ├── md_html.ts         # Markdown 渲染
-│   │   └── ai_chat.ts         # AI 聊天（预留）
 │   ├── services/              # 业务逻辑
-│   │   ├── post_index.ts      # 文章索引管理
-│   │   └── tag.ts             # 标签索引管理
 │   ├── utils/                 # 工具函数
+│   │   ├── slug.ts            # 哈希 slug 生成器
 │   │   ├── md_html.ts         # Markdown 渲染器
 │   │   └── verify.ts          # 验证码生成
-│   ├── types/                 # TypeScript 类型
 │   └── data/                  # 数据目录
 │       ├── config/            # 配置文件（gitignore）
-│       │   ├── tags/          # 标签索引 JSON
-│       │   └── post_index.json # 文章索引
 │       ├── langrage/          # 多语言配置（gitignore）
 │       └── posts/             # 文章文件（gitignore）
-│           └── images/        # 上传图片（按月分目录）
+│           └── images/        # 上传图片（按 slug 分目录）
 ├── src/                       # 前端代码
 │   ├── views/                 # 页面组件
-│   │   ├── Home.vue           # 首页（左栏+右栏）
-│   │   ├── Categories.vue     # 博客分类页
-│   │   ├── PostDetail.vue     # 文章详情
-│   │   ├── Search.vue         # 搜索页
-│   │   ├── Upload.vue         # 文章管理（需登录）
-│   │   ├── Login.vue          # 登录页
-│   │   ├── Friends.vue        # 友链页
-│   │   ├── About.vue          # 关于页
-│   │   └── CategoryDetail.vue # 标签详情
 │   ├── components/            # 通用组件
 │   ├── layout/                # 布局组件
-│   │   ├── AppLayout.vue      # 主布局
-│   │   ├── Navbar.vue         # 导航栏
-│   │   └── Footer.vue         # 页脚
-│   ├── router/                # 路由配置
-│   ├── assets/                # 静态资源
-│   └── types/                 # TypeScript 类型
-├── public/                    # 公共静态资源
-│   └── images/                # 图片资源
+│   └── assets/                # 静态资源
 ├── doc/                       # 项目文档
 └── vite.config.ts             # Vite 配置
 ```
+
+## 图片管理
+
+### 存储结构
+
+```
+backend/data/posts/images/
+├── {slug1}/
+│   ├── cover.jpg
+│   └── 1717xxx-screenshot.png
+├── {slug2}/
+│   └── cover.png
+└── _temp/                     # 临时目录（上传中）
+```
+
+### 上传流程
+
+1. **前端压缩**: Canvas API 压缩（最大 1920px，JPEG 82%）
+2. **临时存储**: 存入 `images/_temp/` 目录
+3. **移动**: 文章保存后移动到 `images/{slug}/` 目录
+4. **引用**: Markdown 中使用 `![alt](/images/posts/{slug}/filename.jpg)`
+
+### 封面图
+
+- 上传文章时可选择封面图
+- 封面 URL 写入 frontmatter 的 `cover` 字段
+- 文章卡片和详情页自动显示封面
 
 ## API 端点
 
@@ -137,9 +133,9 @@ personal_web/
 | GET | `/api/posts/index` | 获取文章索引 | 否 |
 | GET | `/api/posts/search` | 搜索文章 | 否 |
 | GET | `/api/posts/:slug` | 获取文章详情 | 否 |
-| POST | `/api/posts/upload` | 上传文章 | JWT |
-| PUT | `/api/posts/:slug` | 更新文章 | JWT |
-| DELETE | `/api/posts/:slug` | 删除文章 | JWT |
+| POST | `/api/posts/upload` | 上传文章+封面 | JWT |
+| PUT | `/api/posts/:slug` | 更新文章+封面 | JWT |
+| DELETE | `/api/posts/:slug` | 删除文章+图片 | JWT |
 | POST | `/api/posts/upload-image` | 上传图片 | JWT |
 | POST | `/api/posts/reindex` | 重建索引 | JWT |
 | GET | `/api/tags` | 获取所有标签 | 否 |
@@ -171,22 +167,6 @@ personal_web/
 - `footer.icp`: ICP 备案号
 - `hero`: 英雄区配置
 - `friendLinks`: 友情链接
-
-## 部署
-
-### 构建
-
-```bash
-npm run build
-```
-
-### 启动生产服务器
-
-```bash
-tsx backend/index.ts
-```
-
-前端静态文件在 `dist/` 目录，可通过 Nginx 或 Express 静态服务。
 
 ## 开发文档
 
