@@ -28,8 +28,8 @@
             <a
               v-for="link in config.socialLinks"
               :key="link.platform"
-              :href="link.url"
-              target="_blank"
+              :href="socialUrl(link)"
+              :target="link.platform === 'email' ? undefined : '_blank'"
               rel="noopener"
               class="home__social-icon"
             >
@@ -82,6 +82,13 @@ const config = ref<SiteConfig>({
 const posts = ref<PostMeta[]>([])
 const currentPage = ref(1)
 const pageSize = 5
+
+function socialUrl(link: { platform: string; url: string }): string {
+  if (link.platform === 'email') {
+    return link.url.startsWith('mailto:') ? link.url : `mailto:${link.url}`
+  }
+  return link.url
+}
 
 const totalPages = computed(() => Math.ceil(posts.value.length / pageSize))
 
