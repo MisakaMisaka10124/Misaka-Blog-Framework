@@ -11,10 +11,10 @@
 
 ```
 backend/
-├── index.ts                # 服务入口，Express 配置
+├── index.ts                # 服务入口
 ├── routes/                 # API 路由
 │   ├── index.ts            # 路由聚合器
-│   ├── posts.ts            # 文章 CRUD + 搜索
+│   ├── posts.ts            # 文章 CRUD + 搜索 + 图片上传
 │   ├── tags.ts             # 标签查询
 │   ├── login.ts            # 登录认证
 │   ├── md_html.ts          # Markdown 渲染
@@ -23,21 +23,21 @@ backend/
 │   ├── post_index.ts       # 文章索引管理
 │   └── tag.ts              # 标签索引管理
 ├── utils/                  # 工具函数
+│   ├── slug.ts             # 哈希 slug 生成器
 │   ├── md_html.ts          # Markdown 渲染器
-│   ├── verify.ts           # 验证码生成
-│   └── slug.ts             # 哈希 slug 生成器
+│   └── verify.ts           # 验证码生成
 ├── types/                  # TypeScript 类型定义
 └── data/                   # 数据目录
     ├── config/             # 配置文件
-    │   ├── core_server_config.json    # 服务端配置
-    │   ├── core_server_config.example.json
-    │   ├── post_index.json           # 文章索引（自动生成）
-    │   └── tags/                     # 标签索引目录
+    │   ├── core_server_config.json
+    │   ├── post_index.json       # 文章索引（自动生成）
+    │   └── tags/                 # 标签索引目录
     ├── langrage/           # 多语言配置
     └── posts/              # 文章存储
         ├── *.md            # Markdown 文件
         └── images/         # 上传图片（按 slug 分目录）
-            └── {slug}/     # 每篇文章独立目录
+            ├── {slug}/     # 每篇文章独立目录
+            └── _temp/      # 临时目录（编辑器上传中）
 ```
 
 ## 启动流程
@@ -55,13 +55,9 @@ backend/
 
 ### 1. Slug 生成器 (slug.ts)
 
-**职责**: 生成文章唯一标识符
-
-**算法**: 基于文件名 + 时间戳的 SHA-256 哈希，取前 8 位
+基于文件名 + 时间戳的 SHA-256 哈希，取前 8 位十六进制字符。
 
 ```typescript
-import crypto from 'crypto';
-
 export function generateSlug(filename: string): string {
   const timestamp = Date.now().toString();
   const raw = `${filename}-${timestamp}`;
@@ -69,16 +65,9 @@ export function generateSlug(filename: string): string {
 }
 ```
 
-**特点**:
-- 8 位十六进制字符（约 43 亿种组合）
-- 基于文件名和时间戳，保证唯一性
-- 不可逆，无法从 slug 推断原始文件名
-
 ### 2. 文章索引 (post_index.ts)
 
-**职责**: 管理文章元数据的增删改查
-
-**数据结构** (`PostMeta`):
+**PostMeta 结构**:
 ```typescript
 interface PostMeta {
   slug: string;        // 哈希 slug
@@ -86,7 +75,7 @@ interface PostMeta {
   summary: string;     // 简介（frontmatter > 正文前 200 字）
   cover: string;       // 封面图 URL
   tags: string[];      // 标签数组
-  date: string;        // 日期（frontmatter > 文件修改时间）
+  date: string;        // 日期
   wordCount: number;   // 字数
   readTime: string;    // 阅读时间
 }
@@ -101,133 +90,91 @@ interface PostMeta {
 
 ### 3. 标签系统 (tag.ts)
 
-**职责**: 管理标签与文章的关联关系
-
-**存储方式**: 每个标签一个 JSON 文件，存储在 `data/config/tags/` 目录
-
-**数据结构** (`TagIndex`):
-```typescript
-interface TagIndex {
-  tag: string;      // 标签名
-  posts: string[];  // 文章 slug 列表
-}
-```
+每个标签一个 JSON 文件，存储在 `data/config/tags/` 目录。
 
 **核心函数**:
-- `addTagToPost(tag, slug)`: 将文章添加到标签
-- `removeTagFromPost(tag, slug)`: 从标签中移除文章
 - `syncTagsForPost(slug, newTags, oldTags)`: 增量同步标签
-- `syncAllTags(posts)`: 从文章索引重建全部标签（启动时调用）
-- `getAllTags()`: 获取所有标签及其文章数量
-- `getPostsByTag(tag)`: 获取某标签下的文章列表
+- `syncAllTags(posts)`: 启动时从索引重建全部标签
+- `getAllTags()`: 获取所有标签及文章数量
 
 ### 4. 图片管理
 
-**存储结构**: `backend/data/posts/images/{slug}/`
-
 **核心函数**:
 - `moveImageToSlugDir(tempPath, slug, filename)`: 移动图片到 slug 目录
-- `moveTempImagesToSlug(slug)`: 将 _temp 目录图片移到 slug 目录
 - `removeImageDir(slug)`: 删除 slug 对应的图片目录
-- `writeFrontmatterField(slug, field, value)`: 写入/更新 frontmatter 字段
+- `writeFrontmatterField(slug, field, value)`: 写入 frontmatter 字段
 
-## API 路由详解
+## API 路由
 
-### 文章路由 (posts.ts)
+### POST /api/posts/upload
 
-#### POST /api/posts/upload
-- **认证**: JWT
-- **功能**: 上传 Markdown 文章 + 可选封面图
-- **参数**: multipart/form-data
-  - `file`: Markdown 文件
-  - `cover`: 封面图片（可选）
-  - `tags`: 标签（逗号分隔）
-- **处理**:
-  1. 自动生成哈希 slug
-  2. 保存 md 文件为 `{slug}.md`
-  3. 封面图移动到 `images/{slug}/` 并写入 frontmatter
-  4. _temp 图片移动到 slug 目录
-  5. 更新索引，同步标签
-- **返回**: `{ message, slug, cover, tags, meta }`
+上传 Markdown 文章 + 可选封面图。
 
-#### POST /api/posts/upload-image
-- **认证**: JWT
-- **功能**: 上传文章内图片
-- **参数**: multipart/form-data
-  - `image`: 图片文件
-  - `slug`: 文章 slug（图片存入对应目录）
-- **返回**: `{ url, filename }`
+- 自动生成哈希 slug
+- 封面图移动到 `images/{slug}/` 并写入 frontmatter
+- `_temp` 目录图片移动到 slug 目录，md 中的 `_temp` URL 自动替换为真实 URL
+- 更新索引，同步标签
 
-#### GET /api/posts/search
-- **认证**: 无
-- **功能**: 搜索文章
-- **参数**: query string
-  - `q`: 搜索关键字（匹配标题、简介、标签）
-  - `tag`: 标签过滤
-- **返回**: `{ posts: PostMeta[], total: number }`
+### POST /api/posts/upload-image
 
-#### PUT /api/posts/:slug
-- **认证**: JWT
-- **功能**: 更新文章内容和可选封面
-- **参数**: multipart/form-data
-  - `content`: 完整的 Markdown 内容（含 frontmatter）
-  - `cover`: 新的封面图片（可选）
-- **处理**:
-  1. 读取旧标签
-  2. 写入新内容
-  3. 如果有新封面，移动到 slug 目录并更新 frontmatter
-  4. 更新索引，增量同步标签
-- **返回**: `{ message, slug, meta }`
+上传文章内图片到指定 slug 目录。
 
-#### DELETE /api/posts/:slug
-- **认证**: JWT
-- **功能**: 删除文章
-- **处理**:
-  1. 移除所有标签关联
-  2. 从索引中移除
-  3. 删除 .md 文件
-  4. 删除图片目录 `images/{slug}/`
-- **返回**: `{ message, slug }`
+- 参数: `image`（文件）、`slug`（文章 slug）
+- 返回: `{ url, filename }`
 
-### 标签路由 (tags.ts)
+### PUT /api/posts/:slug
 
-#### GET /api/tags
-- **认证**: 无
-- **功能**: 获取所有标签及文章数量
-- **返回**: `{ tags: [{ tag, count }] }`
+更新文章内容和可选封面。
 
-#### GET /api/tags/:tag
-- **认证**: 无
-- **功能**: 获取标签下的文章列表
-- **返回**: `{ tag, posts: PostMeta[] }`
+- 支持 multipart/form-data（有封面时）和 JSON（无封面时）
+- 条件性 multer 中间件
+- 更新索引，增量同步标签
+
+### DELETE /api/posts/:slug
+
+删除文章、图片目录并清理索引。
+
+### GET /api/posts/search
+
+搜索文章，支持 `q`（关键字）和 `tag`（标签）参数。
+
+### GET /api/posts/index
+
+返回所有文章元数据列表。
+
+### GET /api/posts/:slug
+
+返回指定文章的 Markdown 原文和元数据。
+
+### GET /api/tags
+
+返回所有标签及文章数量。
+
+### GET /api/tags/:tag
+
+返回标签下的文章列表。
+
+### GET /api/captcha
+
+生成 SVG 验证码，返回 `{ id, data }`。
+
+### POST /api/login
+
+验证用户名、密码和验证码，返回 JWT。
+
+### POST /api/md/render
+
+将 Markdown 渲染为 HTML（支持代码高亮）。
 
 ## 认证机制
 
-### JWT 令牌
-
-- **签发**: 登录成功后返回
-- **存储**: 前端 localStorage
-- **验证**: `verifyToken` 中间件
-- **过期**: 24 小时
-
-### 验证码
-
-- **生成**: svg-captcha 生成 SVG
-- **存储**: 内存 Map（id -> text）
-- **验证**: 一次性，验证后删除
-
-## 图片上传流程
-
-1. **前端压缩**: Canvas API 压缩（最大 1920px，JPEG 82% 质量）
-2. **上传**: multipart/form-data 发送到后端
-3. **临时存储**: 存入 `images/_temp/` 目录
-4. **移动**: 根据 slug 移动到 `images/{slug}/` 目录
-5. **返回**: 图片 URL `/images/posts/{slug}/filename.ext`
-6. **引用**: 在 Markdown 中使用 `![alt](url)`
+- JWT 令牌，过期时间 24 小时
+- `verifyToken` 中间件校验
+- svg-captcha 一次性验证码
 
 ## 错误处理
 
 - 400: 请求参数错误
-- 401: 未认证（无 token 或 token 无效）
+- 401: 未认证
 - 404: 资源不存在
 - 500: 服务器内部错误
