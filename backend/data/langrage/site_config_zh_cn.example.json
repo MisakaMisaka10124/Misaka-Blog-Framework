@@ -1,5 +1,5 @@
 {
-  "siteTitle": "Misaka10124の空间",
+  "siteTitle": "我的个人空间",
   "welcomeMessage": "你好，欢迎来到我的空间！",
   "chatPlaceholder": "有什么想问 AI 的吗？",
   "about": "你的个人简介，会显示在首页左侧卡片中。",
@@ -16,7 +16,7 @@
     {"platform": "email", "url": "your@email.com", "icon": "email"}
   ],
   "footer": {
-    "copyright": "2026 Misaka10124",
+    "copyright": "2026 Your Name",
     "icp": ""
   },
   "hero": {
@@ -30,16 +30,16 @@
   },
   "friendLinks": [
     {
-      "name": "不正经の人Y",
-      "avatar": "/images/friends/Bzjdry.jpg",
-      "desc": "数码爱好者",
-      "url": "https://my.anontokyo.cc"
+      "name": "朋友A",
+      "avatar": "/images/friends/avatar1.jpg",
+      "desc": "朋友简介",
+      "url": "https://example.com"
     },
     {
-      "name": "MisakaE",
-      "avatar": "/images/friends/MisakaE.jpg",
-      "desc": "CTF大手子",
-      "url": "https://misakae.live"
+      "name": "朋友B",
+      "avatar": "/images/friends/avatar2.jpg",
+      "desc": "朋友简介",
+      "url": "https://example.com"
     }
   ]
 }

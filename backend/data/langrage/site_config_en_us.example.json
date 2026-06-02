@@ -1,8 +1,8 @@
 {
-  "siteTitle": "Misaka's Personal Website",
+  "siteTitle": "My Personal Website",
   "welcomeMessage": "Hello, welcome to my space!",
   "chatPlaceholder": "Ask AI anything?",
-  "about": "A developer who loves tech and anime, always tinkering with interesting things.",
+  "about": "A brief introduction about yourself, displayed on the homepage sidebar.",
   "navLinks": [
     {"label": "Home", "path": "/"},
     {"label": "Blog", "path": "/categories"},
@@ -10,17 +10,17 @@
     {"label": "About", "path": "/about"}
   ],
   "socialLinks": [
-    {"platform": "github", "url": "https://github.com/MisakaMisaka10124", "icon": "github"},
-    {"platform": "bilibili", "url": "https://space.bilibili.com/", "icon": "bilibili"},
-    {"platform": "twitter", "url": "https://x.com/", "icon": "twitter"},
-    {"platform": "email", "url": "misaka@example.com", "icon": "email"}
+    {"platform": "github", "url": "https://github.com/YOUR_USERNAME", "icon": "github"},
+    {"platform": "bilibili", "url": "https://space.bilibili.com/YOUR_ID", "icon": "bilibili"},
+    {"platform": "twitter", "url": "https://x.com/YOUR_HANDLE", "icon": "twitter"},
+    {"platform": "email", "url": "your@email.com", "icon": "email"}
   ],
   "footer": {
-    "copyright": "2026 Misaka10124",
+    "copyright": "2026 Your Name",
     "icp": ""
   },
   "hero": {
-    "subtitle": "The light dancing on your fingertips is my eternal faith!",
+    "subtitle": "Your personal tagline",
     "backgroundImages": [
       "/images/morning.jpg",
       "/images/noon.jpg",
@@ -30,28 +30,16 @@
   },
   "friendLinks": [
     {
-      "name": "Bzjdry",
-      "avatar": "/images/friends/Bzjdry.jpg",
-      "desc": "Digital enthusiast",
-      "url": "https://my.anontokyo.cc"
+      "name": "Friend A",
+      "avatar": "/images/friends/avatar1.jpg",
+      "desc": "A brief description",
+      "url": "https://example.com"
     },
     {
-      "name": "MisakaE",
-      "avatar": "/images/friends/MisakaE.jpg",
-      "desc": "CTF Expert",
-      "url": "https://misakae.live"
-    },
-    {
-      "name": "SukunaW",
-      "avatar": "/images/friends/SukunaW.jpg",
-      "desc": "HUST Master",
-      "url": "https://sukunahust.moe"
-    },
-    {
-      "name": "Xingjian",
-      "avatar": "/images/friends/Xingjian.jpg",
-      "desc": "Music Producer",
-      "url": "https://space.bilibili.com/"
+      "name": "Friend B",
+      "avatar": "/images/friends/avatar2.jpg",
+      "desc": "A brief description",
+      "url": "https://example.com"
     }
   ]
 }
