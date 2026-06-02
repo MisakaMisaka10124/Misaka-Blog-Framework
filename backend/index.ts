@@ -118,7 +118,7 @@ const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
   // SPA 回退：非 API、非图片、非文档的路由都返回 index.html
-  app.get('*', (req, res) => {
+  app.get('/{*path}', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
   console.log(`Frontend served from: ${distPath}`);
