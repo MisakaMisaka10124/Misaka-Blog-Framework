@@ -22,6 +22,10 @@ backend/data/posts/images/
 # Legacy project (reference only)
 personal-web-set_副本/
 
+# Claude Code
+.claude/
+CLAUDE.md
+
 # OS
 .DS_Store
 *.local
