@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
-import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import { buildIndex, readIndex, addOrUpdatePost, removePost } from '../services/post_index';
-import { syncTagsForPost, getAllTags } from '../services/tag';
+import { syncTagsForPost } from '../services/tag';
 import { generateSlug } from '../utils/slug';
+import { verifyToken } from '../middleware/auth';
 
 const router = Router();
 const configPath = path.join(__dirname, '../data/config/core_server_config.json');
@@ -83,18 +83,6 @@ function writeFrontmatterField(slug: string, field: string, value: string) {
   fs.writeFileSync(filePath, content, 'utf-8');
 }
 
-// JWT 校验中间件
-const verifyToken = (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: '未提供令牌' });
-
-  try {
-    req.user = jwt.verify(token, getConfig().jwt.secret);
-    next();
-  } catch (e) {
-    res.status(401).json({ error: 'Token 无效或已过期' });
-  }
-};
 
 /**
  * @openapi
