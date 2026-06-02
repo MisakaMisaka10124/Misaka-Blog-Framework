@@ -428,9 +428,17 @@ router.delete('/:slug', verifyToken, (req, res) => {
  *       404:
  *         description: 文章不存在
  */
-router.put('/:slug', verifyToken, upload.single('cover'), (req: any, res) => {
+router.put('/:slug', verifyToken, (req: any, res, next) => {
+  // 只在有文件时使用 multer
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    upload.single('cover')(req, res, next);
+  } else {
+    next();
+  }
+}, (req: any, res) => {
   const { slug } = req.params;
-  const { content } = req.body;
+  const content = req.body.content;
 
   if (!content) return res.status(400).json({ error: '内容不能为空' });
 

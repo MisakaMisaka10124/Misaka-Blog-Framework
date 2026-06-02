@@ -118,13 +118,17 @@
             <button type="button" @click="insertMd('*', '*')" title="斜体"><em>I</em></button>
             <button type="button" @click="insertMd('`', '`')" title="行内代码">&lt;/&gt;</button>
             <button type="button" @click="insertMd('\n```\n', '\n```\n')" title="代码块">[ ]</button>
-            <button type="button" @click="insertMd('[', '](url)')" title="链接">🔗</button>
-            <button type="button" @click="triggerImageUpload" title="插入图片">🖼</button>
-            <button type="button" @click="insertMd('\n> ', '\n')" title="引用">❝</button>
-            <button type="button" @click="insertMd('\n- ', '\n')" title="列表">☰</button>
-            <span class="upload__toolbar-hint">支持粘贴图片</span>
+            <button type="button" @click="insertMd('[', '](url)')" title="链接">L</button>
+            <button type="button" @click="triggerImageUpload" title="插入图片">IMG</button>
+            <button type="button" @click="insertMd('\n> ', '\n')" title="引用">Q</button>
+            <button type="button" @click="insertMd('\n- ', '\n')" title="列表">-</button>
+            <div class="upload__toolbar-right">
+              <button type="button" :class="['upload__mode-btn', { active: !previewMode }]" @click="previewMode = false">Code</button>
+              <button type="button" :class="['upload__mode-btn', { active: previewMode }]" @click="previewMode = true">Preview</button>
+            </div>
           </div>
           <textarea
+            v-show="!previewMode"
             ref="editorRef"
             v-model="editContent"
             class="upload__editor"
@@ -133,6 +137,7 @@
             @paste="handlePaste"
             @keydown.tab.prevent="insertTab"
           ></textarea>
+          <div v-show="previewMode" class="upload__preview markdown-body" v-html="previewHtml"></div>
         </div>
 
         <input ref="imageInputRef" type="file" accept="image/*" @change="handleImageSelect" hidden />
@@ -153,7 +158,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import GlassCard from '../components/GlassCard.vue'
@@ -195,6 +200,8 @@ const editCoverFile = ref<File | null>(null)
 const editCoverName = ref('')
 const allTags = ref<string[]>([])
 const tagSuggestions = ref<string[]>([])
+const previewMode = ref(false)
+const previewHtml = ref('')
 
 const editStartTime = ref(0)
 const editDuration = ref(0)
@@ -346,6 +353,18 @@ async function loadAllTags() {
 
 // ========== 编辑器工具 ==========
 
+// 切换预览时渲染 Markdown
+watch(previewMode, async (val) => {
+  if (val && editContent.value.trim()) {
+    try {
+      const { data } = await axios.post('/api/md/render', { markdown: editContent.value })
+      previewHtml.value = data.html || ''
+    } catch {
+      previewHtml.value = '<p>渲染失败</p>'
+    }
+  }
+})
+
 function insertMd(before: string, after: string) {
   const el = editorRef.value
   if (!el) return
@@ -426,6 +445,7 @@ async function insertImage(file: File) {
 // ========== 保存 ==========
 
 async function handleSave() {
+  if (!editTitle.value.trim()) { saveError.value = '请输入标题'; return }
   if (!editContent.value.trim()) { saveError.value = '请输入文章内容'; return }
   saveError.value = ''; saveSuccess.value = ''; saveLoading.value = true
 
@@ -789,7 +809,22 @@ onUnmounted(() => { stopEditTimer() })
 
 .upload__editor-toolbar button:hover { background: rgba(255, 255, 255, 0.1); color: var(--color-text-primary); }
 
-.upload__toolbar-hint { margin-left: auto; color: var(--color-text-muted); font-size: 0.75em; align-self: center; }
+.upload__toolbar-right {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.upload__mode-btn {
+  padding: var(--space-xs) var(--space-sm) !important;
+  font-size: 0.8em !important;
+  border-radius: 3px !important;
+}
+
+.upload__mode-btn.active {
+  background: rgba(59, 130, 246, 0.3) !important;
+  color: var(--color-accent) !important;
+}
 
 .upload__editor {
   background: rgba(255, 255, 255, 0.06);
@@ -807,6 +842,63 @@ onUnmounted(() => { stopEditTimer() })
 }
 
 .upload__editor:focus { border-color: var(--color-accent); }
+
+.upload__preview {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: var(--space-md);
+  min-height: 400px;
+  overflow-y: auto;
+  color: var(--color-text-primary);
+  font-size: 0.95em;
+  line-height: 1.8;
+}
+
+.upload__preview :deep(h1),
+.upload__preview :deep(h2),
+.upload__preview :deep(h3) {
+  color: var(--color-text-primary);
+  margin: 1em 0 0.5em;
+}
+
+.upload__preview :deep(p) {
+  margin-bottom: 0.8em;
+}
+
+.upload__preview :deep(code) {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.9em;
+}
+
+.upload__preview :deep(pre) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: var(--space-md);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.upload__preview :deep(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.upload__preview :deep(blockquote) {
+  border-left: 3px solid var(--color-accent);
+  padding-left: var(--space-md);
+  color: var(--color-text-secondary);
+  margin-bottom: 1em;
+}
+
+.upload__preview :deep(img) {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
 
 .upload__error { color: #ef4444; font-size: 0.85em; }
 .upload__success { color: #22c55e; font-size: 0.85em; }
