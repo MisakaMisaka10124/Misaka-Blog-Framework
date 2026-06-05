@@ -16,6 +16,7 @@ backend/
 │   ├── index.ts            # 路由聚合器
 │   ├── posts.ts            # 文章 CRUD + 搜索 + 图片上传
 │   ├── tags.ts             # 标签查询
+│   ├── admin.ts            # 后台管理 API
 │   ├── login.ts            # 登录认证
 │   ├── visitor.ts          # 访客统计
 │   ├── md_html.ts          # Markdown 渲染
@@ -32,17 +33,21 @@ backend/
 │   ├── rate_limit.ts       # 通用限流中间件
 │   └── verify.ts           # 验证码生成
 ├── types/                  # TypeScript 类型定义
-└── data/                   # 数据目录
+└── data/                   # 数据目录（所有可编辑内容）
     ├── config/             # 配置文件
     │   ├── core_server_config.json
     │   ├── post_index.json       # 文章索引（自动生成）
-    │   └── tags/                 # 标签索引目录
-    ├── langrage/           # 多语言配置
+    │   └── tags/                 # 标签索引目录（自动生成）
+    ├── langrage/           # 多语言站点配置
+    ├── images/             # 可修改图片
+    │   ├── avatars/        # 头像
+    │   ├── backgrounds/    # 背景图
+    │   ├── friends/        # 友链头像
+    │   ├── social/         # 社交图标 SVG
+    │   └── uploads/        # 通用上传
     └── posts/              # 文章存储
         ├── *.md            # Markdown 文件
-        └── images/         # 上传图片（按 slug 分目录）
-            ├── {slug}/     # 每篇文章独立目录
-            └── _temp/      # 临时目录（编辑器上传中）
+        └── images/         # 文章图片（按 slug 分目录）
 ```
 
 ## 启动流程
@@ -50,7 +55,7 @@ backend/
 1. 读取 `core_server_config.json` 获取端口和路径配置
 2. 初始化 Express 应用，设置 trust proxy，加载中间件
 3. 配置 Swagger API 文档 (`/api-docs`)
-4. 挂载静态文件服务 (`/images/posts`)
+4. 挂载静态文件服务（`/images/backgrounds`、`/images/avatars`、`/images/friends`、`/images/social`、`/images/posts`、`/images/uploads`）
 5. 挂载 API 路由 (`/api`)
 6. 检测 `dist/` 目录，存在则挂载前端静态文件 + SPA 回退
 7. 启动 HTTP 服务器
@@ -194,6 +199,25 @@ export function verifyToken(req, res, next) {
 ### GET /api/tags/:tag
 
 返回标签下的文章列表。
+
+### 后台管理 API（/api/admin/）
+
+所有 admin 路由需要 JWT 认证。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/config` | 获取站点配置 |
+| PUT | `/api/admin/config` | 更新单个字段 |
+| PUT | `/api/admin/config/batch` | 批量更新字段 |
+| GET | `/api/admin/friends` | 获取友链列表 |
+| PUT | `/api/admin/friends` | 更新友链列表 |
+| GET | `/api/admin/social` | 获取社交媒体列表 |
+| PUT | `/api/admin/social` | 更新社交媒体列表 |
+| GET | `/api/admin/social/icons` | 获取可用社交图标 |
+| PUT | `/api/admin/server-config` | 更新服务器配置 |
+| POST | `/api/admin/upload/:type` | 上传图片（avatar/friends/social） |
+
+配置更新会同步写入所有语言文件。图片上传到 `data/images/` 对应子目录，返回 `/images/{type}/url`。
 
 ### GET /api/captcha
 

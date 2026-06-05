@@ -21,11 +21,17 @@ src/
 │   ├── CategoryDetail.vue  # 标签详情页
 │   ├── PostDetail.vue      # 文章详情页（Markdown 渲染+TOC）
 │   ├── Search.vue          # 搜索页（标签筛选+分页）
-│   ├── Upload.vue          # 文章管理页（Code/Preview 编辑器）
-│   ├── Login.vue           # 登录页
 │   ├── Friends.vue         # 友链页
 │   ├── About.vue           # 关于页
+│   ├── Login.vue           # 登录页
 │   └── NotFound.vue        # 404 页面
+├── views/admin/            # 后台管理页面
+│   ├── Dashboard.vue       # 仪表盘（统计+快捷操作+最近文章）
+│   ├── AdminPostEdit.vue   # 文章编辑器（Code/Preview+标签+封面）
+│   ├── AdminPosts.vue      # 文章列表管理
+│   ├── AdminSettings.vue   # 站点设置（头像/标题/背景/页脚）
+│   ├── AdminFriends.vue    # 友链管理
+│   └── AdminSocial.vue     # 社交媒体管理
 ├── components/             # 通用组件
 │   ├── GlassCard.vue       # 玻璃拟态卡片
 │   ├── HeroHeader.vue      # 英雄头图
@@ -34,7 +40,8 @@ src/
 │   ├── ThemeToggle.vue     # 主题切换
 │   └── TocSidebar.vue      # 目录侧边栏
 ├── layout/                 # 布局组件
-│   ├── AppLayout.vue       # 主布局（背景+导航+内容+页脚+光标）
+│   ├── AppLayout.vue       # 前台布局（背景+导航+内容+页脚+光标）
+│   ├── AdminLayout.vue     # 后台布局（侧边栏+顶栏+内容）
 │   ├── Navbar.vue          # 导航栏（语言切换+搜索）
 │   └── Footer.vue          # 页脚（版权+ICP）
 ├── router/                 # 路由配置
@@ -118,42 +125,43 @@ const routes = [
 
 ### CSS 变量
 
+深色模式为纯黑色调，浅色模式为纯白色调：
+
 ```css
 :root {
+  --color-bg: #111111;
+  --color-bg-secondary: #1a1a1a;
+  --color-surface: rgba(26, 26, 26, 0.85);
   --color-accent: #3b82f6;
-  --color-accent-hover: #60a5fa;
-  --color-text-primary: #e8e8e8;
-  --color-text-secondary: #b0b0c8;
-  --color-text-muted: #a0a0b8;
-  --glass-bg: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.18);
+  --admin-dialog-bg: #1e1e1e;
   /* ... */
 }
 
 [data-theme="light"] {
-  --color-text-primary: #1a1a2e;
-  --color-text-secondary: #3a3a4a;
-  --color-text-muted: #5a5a6a;    /* 对比度优化 */
+  --color-bg: #f0f2f5;
+  --color-bg-secondary: #ffffff;
+  --color-surface: #ffffff;
+  --admin-dialog-bg: #ffffff;
   /* ... */
 }
 ```
 
 ### 自定义光标
 
-```css
-.custom-cursor {
-  position: fixed;
-  pointer-events: none;
-  z-index: 99999;
-  background-image: url('/images/cursor.png');
-  display: none;
-}
+仅在前台 `.app-layout` 内生效，后台使用系统光标：
 
+```css
 @media (pointer: fine) {
-  * { cursor: none !important; }
+  .app-layout * { cursor: none !important; }
   .custom-cursor { display: block; }
 }
 ```
+
+### 布局分离
+
+前台（`AppLayout`）和后台（`AdminLayout`）使用独立布局：
+- 前台：背景系统 + 导航栏 + 自定义光标
+- 后台：侧边栏 + 顶栏，系统光标，弹窗正常显示鼠标
 
 ### 分页器样式
 
