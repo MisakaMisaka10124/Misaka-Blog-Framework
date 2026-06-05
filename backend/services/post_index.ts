@@ -53,10 +53,21 @@ export function scanPosts(): PostMeta[] {
   if (!fs.existsSync(postsDir)) return [];
 
   const files = fs.readdirSync(postsDir).filter(f => f.endsWith('.md'));
-  return files.map(file => {
-    const content = fs.readFileSync(path.join(postsDir, file), 'utf-8');
-    return extractMeta(file, content);
-  }).sort((a, b) => b.date.localeCompare(a.date)); // 按日期降序
+  const posts = files.map(file => {
+    const filePath = path.join(postsDir, file);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const meta = extractMeta(file, content);
+    const mtime = fs.statSync(filePath).mtimeMs;
+    return { meta, mtime };
+  });
+
+  // 按日期降序，同日期按文件修改时间降序（新的在前）
+  return posts
+    .sort((a, b) => {
+      const dateDiff = b.meta.date.localeCompare(a.meta.date);
+      return dateDiff !== 0 ? dateDiff : b.mtime - a.mtime;
+    })
+    .map(p => p.meta);
 }
 
 /** 构建全局索引并写入 JSON 文件 */
@@ -97,7 +108,18 @@ export function addOrUpdatePost(slug: string): PostMeta | null {
   } else {
     index.posts.push(meta);
   }
-  index.posts.sort((a, b) => b.date.localeCompare(a.date));
+
+  // 按日期降序，同日期按文件修改时间降序
+  const mtimes = new Map<string, number>();
+  for (const p of index.posts) {
+    const fp = path.join(POSTS_DIR(), `${p.slug}.md`);
+    mtimes.set(p.slug, fs.existsSync(fp) ? fs.statSync(fp).mtimeMs : 0);
+  }
+  index.posts.sort((a, b) => {
+    const dateDiff = b.date.localeCompare(a.date);
+    return dateDiff !== 0 ? dateDiff : (mtimes.get(b.slug) || 0) - (mtimes.get(a.slug) || 0);
+  });
+
   index.lastUpdated = new Date().toISOString();
 
   fs.writeFileSync(INDEX_PATH(), JSON.stringify(index, null, 2), 'utf-8');

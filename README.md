@@ -18,6 +18,7 @@
 - svg-captcha 验证码
 - multer 文件上传
 - gray-matter frontmatter 解析
+- express-rate-limit 限流
 - Swagger API 文档
 
 ## 功能特性
@@ -26,7 +27,7 @@
 - 哈希 Slug：基于 SHA-256 自动生成 8 位唯一标识
 - 标签系统：独立 JSON 文件存储，支持自动补全
 - 全文搜索：支持标题、简介、标签关键字搜索
-- 图片管理：按文章 slug 分目录存储，支持封面图
+- 图片管理：按文章 slug 分目录存储，文件名自动去空格，支持封面图
 - 编辑器：Code/Preview 双模式切换，支持粘贴图片
 - 多语言：中文简体 / 中文繁体 / English
 - 深色模式：自动跟随系统主题，浅色模式对比度优化
@@ -35,6 +36,9 @@
 - 自定义光标：跟随鼠标的动态图片
 - 友情链接：可配置的友链展示
 - ICP 备案：页脚显示备案号并链接到工信部查询
+- 访客统计：IP 地理定位 + 国旗显示，今日/总访客计数
+- API 限流：数据接口 IP 级限流，防爬虫和 DDoS
+- 认证拦截器：Axios 请求/响应拦截器自动注入 JWT，401 自动跳转登录
 
 ## 快速开始
 
@@ -63,15 +67,21 @@ cp backend/data/langrage/site_config_zh_hk.example.json backend/data/langrage/si
 ### 启动开发服务器
 
 ```bash
-npm run dev:server   # 启动后端（端口 3000）
-npm run dev          # 启动前端（端口 5173）
+npm run dev          # 启动前端开发服务器（端口 5173）
+npm run server       # 启动后端（端口 3000）
+npm run server:watch # 后端热重载（nodemon，修改自动重启）
 ```
 
 ### 构建生产版本
 
 ```bash
-npm run build
+npm run build        # 编译前端到 dist/
+npm run start        # 编译前端 + 启动后端（生产模式）
 ```
+
+### 生产部署
+
+后端自动检测 `dist/` 目录并提供前端静态文件服务，配合 Nginx 反向代理使用。参考 `nginx.conf` 配置模板。
 
 ## 项目结构
 
@@ -83,13 +93,18 @@ personal_web/
 │   │   ├── posts.ts           # 文章 CRUD + 搜索 + 图片上传
 │   │   ├── tags.ts            # 标签查询
 │   │   ├── login.ts           # 登录认证
+│   │   ├── visitor.ts         # 访客统计
 │   │   └── md_html.ts         # Markdown 渲染
 │   ├── services/              # 业务逻辑
 │   │   ├── post_index.ts      # 文章索引管理
-│   │   └── tag.ts             # 标签索引管理
+│   │   ├── tag.ts             # 标签索引管理
+│   │   └── visitor.ts         # 访客统计服务
+│   ├── middleware/             # 中间件
+│   │   └── auth.ts            # JWT 认证中间件
 │   ├── utils/                 # 工具函数
 │   │   ├── slug.ts            # 哈希 slug 生成器
 │   │   ├── md_html.ts         # Markdown 渲染器
+│   │   ├── rate_limit.ts      # 通用限流中间件
 │   │   └── verify.ts          # 验证码生成
 │   └── data/                  # 数据目录（gitignore）
 │       ├── config/            # 配置文件 + 标签索引
@@ -158,23 +173,24 @@ Upload 页面的 Markdown 编辑器支持：
 
 ## API 端点
 
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| GET | `/api/config` | 获取站点配置 | 否 |
-| GET | `/api/friendlinks` | 获取友链列表 | 否 |
-| GET | `/api/posts/index` | 获取文章索引 | 否 |
-| GET | `/api/posts/search` | 搜索文章 | 否 |
-| GET | `/api/posts/:slug` | 获取文章详情 | 否 |
-| POST | `/api/posts/upload` | 上传文章+封面 | JWT |
-| PUT | `/api/posts/:slug` | 更新文章+封面 | JWT |
-| DELETE | `/api/posts/:slug` | 删除文章+图片目录 | JWT |
-| POST | `/api/posts/upload-image` | 上传图片 | JWT |
-| POST | `/api/posts/reindex` | 重建索引 | JWT |
-| GET | `/api/tags` | 获取所有标签 | 否 |
-| GET | `/api/tags/:tag` | 获取标签下的文章 | 否 |
-| GET | `/api/captcha` | 获取验证码 | 否 |
-| POST | `/api/login` | 登录 | 否 |
-| POST | `/api/md/render` | 渲染 Markdown | 否 |
+| 方法 | 路径 | 说明 | 认证 | 限流 |
+|------|------|------|------|------|
+| GET | `/api/config` | 获取站点配置 | 否 | 否 |
+| GET | `/api/friendlinks` | 获取友链列表 | 否 | 否 |
+| GET | `/api/posts/index` | 获取文章索引 | 否 | 是 |
+| GET | `/api/posts/search` | 搜索文章 | 否 | 是 |
+| GET | `/api/posts/:slug` | 获取文章详情 | 否 | 是 |
+| POST | `/api/posts/upload` | 上传文章+封面 | JWT | 否 |
+| PUT | `/api/posts/:slug` | 更新文章+封面 | JWT | 否 |
+| DELETE | `/api/posts/:slug` | 删除文章+图片目录 | JWT | 否 |
+| POST | `/api/posts/upload-image` | 上传图片 | JWT | 否 |
+| POST | `/api/posts/reindex` | 重建索引 | JWT | 否 |
+| GET | `/api/tags` | 获取所有标签 | 否 | 是 |
+| GET | `/api/tags/:tag` | 获取标签下的文章 | 否 | 是 |
+| GET | `/api/captcha` | 获取验证码 | 否 | 否 |
+| POST | `/api/login` | 登录 | 否 | 否 |
+| POST | `/api/md/render` | 渲染 Markdown | 否 | 否 |
+| GET | `/api/visitor/stats` | 访客统计+IP定位 | 否 | 是 |
 
 ## 配置说明
 
@@ -183,7 +199,11 @@ Upload 页面的 Markdown 编辑器支持：
 ```json
 {
   "server": { "port": 3000 },
-  "jwt": { "secret": "your-secret-key" },
+  "jwt": { "secret": "your-secret-key", "expires_in": "24h" },
+  "rate_limit": {
+    "ai_chat": { "window_ms": 3600000, "max_requests": 30 },
+    "data_api": { "window_ms": 60000, "max_requests": 120 }
+  },
   "paths": { "posts_dir": "./data/posts/" }
 }
 ```
@@ -197,7 +217,7 @@ Upload 页面的 Markdown 编辑器支持：
 - `socialLinks`: 社交媒体链接
 - `footer.copyright`: 版权信息
 - `footer.icp`: ICP 备案号
-- `hero`: 英雄区配置（背景图片、签名）
+- `hero`: 个性化配置（背景图片、签名）
 - `friendLinks`: 友情链接
 
 ## 开发文档

@@ -433,7 +433,7 @@ async function insertImage(file: File) {
     const { data } = await axios.post('/api/posts/upload-image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    insertMd(`![${file.name}](${data.url})`, '')
+    insertMd(`![${file.name}](${encodeURI(data.url)})`, '')
   } catch (e: any) {
     saveError.value = '图片上传失败: ' + (e.response?.data?.error || e.message)
   } finally {
@@ -764,6 +764,7 @@ onUnmounted(() => { stopEditTimer() })
   right: 0;
   background: rgba(30, 30, 50, 0.95);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   margin-top: 4px;

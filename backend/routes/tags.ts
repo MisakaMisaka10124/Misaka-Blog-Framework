@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { getAllTags, getPostsByTag } from '../services/tag';
 import { readIndex } from '../services/post_index';
+import { createDataLimiter } from '../utils/rate_limit';
 
 const router = Router();
+const dataLimiter = createDataLimiter();
 
 /**
  * @openapi
@@ -15,7 +17,7 @@ const router = Router();
  *       200:
  *         description: 成功获取标签列表
  */
-router.get('/', (req, res) => {
+router.get('/', dataLimiter, (req, res) => {
   try {
     const tags = getAllTags();
     res.json({ tags });
@@ -41,7 +43,7 @@ router.get('/', (req, res) => {
  *       200:
  *         description: 成功获取文章列表
  */
-router.get('/:tag', (req, res) => {
+router.get('/:tag', dataLimiter, (req, res) => {
   try {
     const { tag } = req.params;
     const slugs = getPostsByTag(tag);

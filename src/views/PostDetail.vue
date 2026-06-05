@@ -1,6 +1,6 @@
 <template>
   <div class="post-detail" v-if="post">
-    <!-- Hero 头图 -->
+    <!-- 头图 -->
     <HeroHeader
       :title="post.meta?.title || post.slug"
       :cover-image="post.meta?.cover"

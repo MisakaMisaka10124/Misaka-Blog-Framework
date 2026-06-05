@@ -6,6 +6,9 @@ import { buildIndex, readIndex, addOrUpdatePost, removePost } from '../services/
 import { syncTagsForPost } from '../services/tag';
 import { generateSlug } from '../utils/slug';
 import { verifyToken } from '../middleware/auth';
+import { createDataLimiter } from '../utils/rate_limit';
+
+const dataLimiter = createDataLimiter();
 
 const router = Router();
 const configPath = path.join(__dirname, '../data/config/core_server_config.json');
@@ -28,9 +31,11 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
+    // 文件名空格替换为连字符，避免 markdown 解析截断 URL
+    const sanitized = file.originalname.replace(/\s+/g, '-');
     const name = IMAGE_RE.test(file.originalname)
-      ? `${Date.now()}-${file.originalname}`
-      : file.originalname;
+      ? `${Date.now()}-${sanitized}`
+      : sanitized;
     cb(null, name);
   }
 });
@@ -236,7 +241,7 @@ router.post('/upload-image', verifyToken, upload.single('image'), (req: any, res
  *       200:
  *         description: 搜索结果
  */
-router.get('/search', (req, res) => {
+router.get('/search', dataLimiter, (req, res) => {
   try {
     const { q, tag } = req.query;
     const index = readIndex();
@@ -272,7 +277,7 @@ router.get('/search', (req, res) => {
  *       200:
  *         description: 成功获取索引
  */
-router.get('/index', (req, res) => {
+router.get('/index', dataLimiter, (req, res) => {
   try {
     const index = readIndex();
     res.json(index);
@@ -322,7 +327,7 @@ router.post('/reindex', verifyToken, (req, res) => {
  *       404:
  *         description: 文章不存在
  */
-router.get('/:slug', (req, res) => {
+router.get('/:slug', dataLimiter, (req, res) => {
   const { slug } = req.params;
   const postsDir = path.join(__dirname, '../', getConfig().paths.posts_dir);
   const filePath = path.join(postsDir, `${slug}.md`);

@@ -101,6 +101,12 @@ const routes = [
 - 标签筛选按钮
 - 搜索结果列表 + 分页器
 
+### About.vue（关于页）
+
+- 站点介绍内容（v-html 渲染）
+- 访客统计栏：今日活跃、今日更新、总访客、今日访客、当前 IP（带国旗）
+- 国旗使用 flag-icons CDN（jsdelivr）
+
 ### NotFound.vue（404 页面）
 
 - 玻璃拟态卡片居中显示
@@ -157,13 +163,37 @@ const routes = [
 
 ## API 调用
 
+### Axios 拦截器 (main.ts)
+
+全局请求拦截器自动注入 JWT Token，响应拦截器处理 401 自动跳转登录页。
+
+```typescript
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('upload_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+axios.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('upload_token')
+      router.push('/login')
+    }
+    return Promise.reject(err)
+  }
+)
+```
+
+### 上传示例
+
 ```typescript
 // 上传文章（含封面）
 const formData = new FormData()
 formData.append('file', mdFile)
 formData.append('tags', tags)
 formData.append('cover', coverFile)
-await axios.post('/api/posts/upload', formData)
+await axios.post('/api/posts/upload', formData) // Token 自动注入
 
 // 更新文章（含封面）
 const formData = new FormData()
@@ -171,7 +201,7 @@ formData.append('content', fullContent)
 formData.append('cover', coverFile)
 await axios.put(`/api/posts/${slug}`, formData)
 
-// 上传编辑器图片
+// 上传编辑器图片（URL 自动 encodeURI 编码后插入 markdown）
 const formData = new FormData()
 formData.append('image', compressed)
 formData.append('slug', editSlug || '_temp')

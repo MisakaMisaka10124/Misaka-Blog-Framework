@@ -9,6 +9,7 @@ import { buildIndex } from './services/post_index';
 import { syncAllTags } from './services/tag';
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json());
 
 const configPath = path.join(__dirname, './data/config/core_server_config.json');

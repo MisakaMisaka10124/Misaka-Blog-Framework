@@ -11,6 +11,7 @@ dist/
 backend/data/config/core_server_config.json
 backend/data/config/post_index.json
 backend/data/config/tags/*.json
+backend/data/config/visitor_stats.json
 backend/data/langrage/site_config_en_us.json
 backend/data/langrage/site_config_zh_cn.json
 backend/data/langrage/site_config_zh_hk.json

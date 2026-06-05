@@ -23,6 +23,11 @@
       "window_ms": 3600000,
       "max_requests": 30,
       "message": "当前IP发送过多请求，请稍后再试。"
+    },
+    "data_api": {
+      "window_ms": 60000,
+      "max_requests": 120,
+      "message": "请求过于频繁，请稍后再试。"
     }
   },
   "paths": {
