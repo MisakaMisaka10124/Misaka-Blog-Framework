@@ -838,7 +838,7 @@ onUnmounted(() => {
 }
 
 .admin-post-edit__cover-preview-btn:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
 }
 
 .admin-post-edit__cover-preview {
@@ -872,7 +872,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(234, 179, 8, 0.2);
   border-radius: 4px;
   font-size: 0.85em;
   color: var(--color-accent);
@@ -940,7 +940,7 @@ onUnmounted(() => {
 }
 
 .admin-post-edit__tag-suggestion:hover {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(234, 179, 8, 0.2);
   color: var(--color-accent);
 }
 
@@ -984,7 +984,7 @@ onUnmounted(() => {
 }
 
 .admin-post-edit__mode-btn.active {
-  background: rgba(59, 130, 246, 0.3) !important;
+  background: rgba(234, 179, 8, 0.3) !important;
   color: var(--color-accent) !important;
 }
 

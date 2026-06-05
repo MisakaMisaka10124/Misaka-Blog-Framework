@@ -415,7 +415,7 @@ onMounted(() => {
 .admin-social__count {
   font-size: 0.9em;
   padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
   color: var(--color-accent);
   border-radius: var(--radius-sm);
 }
@@ -514,7 +514,7 @@ onMounted(() => {
 }
 
 .admin-social__action-btn--edit:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
 }
 
 .admin-social__action-btn--delete {
@@ -547,7 +547,7 @@ onMounted(() => {
 
 .admin-social__add-btn:hover {
   border-color: var(--color-accent);
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(234, 179, 8, 0.05);
 }
 
 /* 对话框 */
@@ -658,7 +658,7 @@ onMounted(() => {
 }
 
 .admin-social__icon-option--selected {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
   border-color: var(--color-accent);
 }
 

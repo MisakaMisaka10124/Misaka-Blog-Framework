@@ -195,7 +195,7 @@ onMounted(() => {
 }
 
 .search__tag-btn.active {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(234, 179, 8, 0.2);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }

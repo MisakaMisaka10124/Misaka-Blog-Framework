@@ -137,8 +137,14 @@ app.get('/api/friendlinks', (req, res) => {
   }
 });
 
-// 静态文件：文章图片
-app.use('/images/posts', express.static(path.join(__dirname, './data/posts/images')));
+// 静态文件：文章图片（映射到 posts 根目录，支持月份子目录）
+// 安全过滤：禁止访问 post_index.json 和 tags/ 目录
+app.use('/images/posts', (req, res, next) => {
+  if (req.path === '/post_index.json' || req.path.startsWith('/tags/')) {
+    return res.status(403).end();
+  }
+  next();
+}, express.static(path.join(__dirname, './data/posts')));
 
 // 静态文件：所有可修改图片统一存放在 data/images/
 app.use('/images/backgrounds', express.static(path.join(__dirname, './data/images/backgrounds')));

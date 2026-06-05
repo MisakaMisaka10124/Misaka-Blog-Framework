@@ -251,7 +251,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
   border-radius: var(--radius-md);
 }
 
@@ -302,7 +302,7 @@ onMounted(async () => {
 }
 
 .dashboard__action-card:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
   border-color: var(--color-accent);
   transform: translateY(-2px);
 }

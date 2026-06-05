@@ -475,7 +475,7 @@ onMounted(() => {
 }
 
 .admin-friends__action-btn--edit:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
 }
 
 .admin-friends__action-btn--delete {

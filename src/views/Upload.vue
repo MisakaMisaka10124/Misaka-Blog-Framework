@@ -770,7 +770,7 @@ onUnmounted(() => { stopEditTimer() })
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(234, 179, 8, 0.2);
   border-radius: 4px;
   font-size: 0.85em;
   color: var(--color-accent);
@@ -836,7 +836,7 @@ onUnmounted(() => { stopEditTimer() })
 }
 
 .upload__tag-suggestion:hover {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(234, 179, 8, 0.2);
   color: var(--color-accent);
 }
 
@@ -876,7 +876,7 @@ onUnmounted(() => { stopEditTimer() })
 }
 
 .upload__mode-btn.active {
-  background: rgba(59, 130, 246, 0.3) !important;
+  background: rgba(234, 179, 8, 0.3) !important;
   color: var(--color-accent) !important;
 }
 

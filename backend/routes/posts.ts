@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
-import { buildIndex, readIndex, addOrUpdatePost, removePost } from '../services/post_index';
+import { buildIndex, readIndex, addOrUpdatePost, removePost, getMonthDir, getMonthDirFromSlug } from '../services/post_index';
 import { syncTagsForPost } from '../services/tag';
 import { generateSlug } from '../utils/slug';
 import { verifyToken } from '../middleware/auth';
@@ -25,7 +25,9 @@ const storage = multer.diskStorage({
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     } else {
-      const dir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+      // md 文件存到当前月份目录
+      const monthDir = getMonthDir(new Date().toISOString());
+      const dir = path.join(__dirname, '../data/posts', monthDir);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     }
@@ -42,25 +44,27 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /** 将图片从临时目录移动到 slug 目录 */
-function moveImageToSlugDir(tempPath: string, slug: string, filename: string): string {
-  const slugDir = path.join(__dirname, '../data/posts/images', slug);
+function moveImageToSlugDir(tempPath: string, slug: string, filename: string, monthDir?: string): string {
+  const month = monthDir || getMonthDir(new Date().toISOString());
+  const slugDir = path.join(__dirname, '../data/posts', month, 'images', slug);
   if (!fs.existsSync(slugDir)) fs.mkdirSync(slugDir, { recursive: true });
   const destPath = path.join(slugDir, filename);
   fs.renameSync(tempPath, destPath);
-  return `/images/posts/${slug}/${filename}`;
+  return `/images/posts/${month}/images/${slug}/${filename}`;
 }
 
 /** 删除 slug 对应的图片目录 */
-function removeImageDir(slug: string) {
-  const slugDir = path.join(__dirname, '../data/posts/images', slug);
+function removeImageDir(slug: string, monthDir: string) {
+  const slugDir = path.join(__dirname, '../data/posts', monthDir, 'images', slug);
   if (fs.existsSync(slugDir)) {
     fs.rmSync(slugDir, { recursive: true, force: true });
   }
 }
 
 /** 读取 md 文件并写入/更新 frontmatter 字段 */
-function writeFrontmatterField(slug: string, field: string, value: string) {
-  const postsDir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+function writeFrontmatterField(slug: string, field: string, value: string, monthDir?: string) {
+  const month = monthDir || getMonthDirFromSlug(slug);
+  const postsDir = path.join(__dirname, '../data/posts', month);
   const filePath = path.join(postsDir, `${slug}.md`);
   if (!fs.existsSync(filePath)) return;
 
@@ -135,18 +139,19 @@ router.post('/upload', verifyToken, upload.fields([
 
   // 自动生成哈希 slug
   const slug = generateSlug(mdFile.originalname);
+  const monthDir = getMonthDir(new Date().toISOString());
 
-  // 将 md 文件重命名为 slug.md
-  const postsDir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+  // 将 md 文件重命名为 slug.md（Multer 已存到月份目录）
+  const postsDir = path.join(__dirname, '../data/posts', monthDir);
   const newMdPath = path.join(postsDir, `${slug}.md`);
   fs.renameSync(mdFile.path, newMdPath);
 
   // 将封面图移动到 slug 目录
   let coverUrl: string | null = null;
   if (coverFile) {
-    coverUrl = moveImageToSlugDir(coverFile.path, slug, coverFile.filename);
+    coverUrl = moveImageToSlugDir(coverFile.path, slug, coverFile.filename, monthDir);
     // 写入 frontmatter
-    writeFrontmatterField(slug, 'cover', coverUrl);
+    writeFrontmatterField(slug, 'cover', coverUrl, monthDir);
   }
 
   // 将 _temp 目录中的图片移动到 slug 目录，并更新 md 中的 _temp URL
@@ -157,9 +162,9 @@ router.post('/upload', verifyToken, upload.fields([
     for (const f of tempFiles) {
       const tempPath = path.join(tempDir, f);
       if (fs.statSync(tempPath).isFile()) {
-        const newUrl = moveImageToSlugDir(tempPath, slug, f);
+        const newUrl = moveImageToSlugDir(tempPath, slug, f, monthDir);
         // 替换 md 内容中的 _temp URL 为真实 slug URL
-        mdContent = mdContent.replace(`/images/posts/_temp/${f}`, newUrl);
+        mdContent = mdContent.replace(`/images/posts/images/_temp/${f}`, newUrl);
       }
     }
     fs.writeFileSync(newMdPath, mdContent, 'utf-8');
@@ -217,8 +222,17 @@ router.post('/upload', verifyToken, upload.fields([
 router.post('/upload-image', verifyToken, upload.single('image'), (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: '没有图片文件' });
   const slug = req.body.slug || '_temp';
-  const url = moveImageToSlugDir(req.file.path, slug, req.file.filename);
-  res.json({ url, filename: req.file.filename });
+  if (slug === '_temp') {
+    // _temp 图片保留在 Multer 的临时目录，不移动到月份子目录
+    // URL 格式与 upload 路由中的 replace 目标一致
+    const url = `/images/posts/images/_temp/${req.file.filename}`;
+    res.json({ url, filename: req.file.filename });
+  } else {
+    // 有 slug 时，从索引获取月份目录并移动到 slug 目录
+    const monthDir = getMonthDirFromSlug(slug);
+    const url = moveImageToSlugDir(req.file.path, slug, req.file.filename, monthDir);
+    res.json({ url, filename: req.file.filename });
+  }
 });
 
 /**
@@ -331,17 +345,28 @@ router.post('/reindex', verifyToken, (req, res) => {
  */
 router.get('/:slug', dataLimiter, (req, res) => {
   const { slug } = req.params;
-  const postsDir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+
+  // 从索引获取文章元数据和月份目录
+  const index = readIndex();
+  const meta = index.posts.find(p => p.slug === slug);
+
+  if (!meta) {
+    return res.status(404).json({ error: '文章不存在' });
+  }
+
+  const monthDir = getMonthDir(meta.date);
+  const postsDir = path.join(__dirname, '../data/posts', monthDir);
   const filePath = path.join(postsDir, `${slug}.md`);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: '文章不存在' });
   }
 
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const index = readIndex();
-  const meta = index.posts.find(p => p.slug === slug);
-
+  let content = fs.readFileSync(filePath, 'utf-8');
+  // 将正文中的相对图片路径替换为完整 URL
+  content = content.replace(/!\[([^\]]*)\]\((images\/[^)]+)\)/g, (match, alt, imgPath) => {
+    return `![${alt}](/images/posts/${monthDir}/${imgPath})`;
+  });
   res.json({ slug, content, meta });
 });
 
@@ -369,20 +394,20 @@ router.get('/:slug', dataLimiter, (req, res) => {
 router.delete('/:slug', verifyToken, (req, res) => {
   const { slug } = req.params;
 
-  // 先获取文章的标签，以便清理标签索引
+  // 先获取文章的标签和月份目录，以便清理标签索引和图片目录
   const index = readIndex();
   const meta = index.posts.find(p => p.slug === slug);
   if (meta) {
     syncTagsForPost(slug, [], meta.tags);
+    // 删除图片目录
+    const monthDir = getMonthDir(meta.date);
+    removeImageDir(slug, monthDir);
   }
 
   const removed = removePost(slug);
   if (!removed) {
     return res.status(404).json({ error: '文章不存在' });
   }
-
-  // 删除图片目录
-  removeImageDir(slug);
 
   res.json({ message: '文章删除成功', slug });
 });
@@ -437,7 +462,16 @@ router.put('/:slug', verifyToken, (req: any, res, next) => {
 
   if (!content) return res.status(400).json({ error: '内容不能为空' });
 
-  const postsDir = path.join(__dirname, '../', getConfig().paths.posts_dir);
+  // 从索引获取文章的月份目录
+  const index = readIndex();
+  const oldPost = index.posts.find(p => p.slug === slug);
+
+  if (!oldPost) {
+    return res.status(404).json({ error: '文章不存在' });
+  }
+
+  const monthDir = getMonthDir(oldPost.date);
+  const postsDir = path.join(__dirname, '../data/posts', monthDir);
   const filePath = path.join(postsDir, `${slug}.md`);
 
   if (!fs.existsSync(filePath)) {
@@ -445,8 +479,6 @@ router.put('/:slug', verifyToken, (req: any, res, next) => {
   }
 
   // 读取旧标签
-  const index = readIndex();
-  const oldPost = index.posts.find(p => p.slug === slug);
   const oldTags = oldPost?.tags || [];
 
   // 写入新内容
@@ -454,8 +486,8 @@ router.put('/:slug', verifyToken, (req: any, res, next) => {
 
   // 如果上传了新封面，移动到 slug 目录并更新 frontmatter
   if (req.file) {
-    const coverUrl = moveImageToSlugDir(req.file.path, slug, req.file.filename);
-    writeFrontmatterField(slug, 'cover', coverUrl);
+    const coverUrl = moveImageToSlugDir(req.file.path, slug, req.file.filename, monthDir);
+    writeFrontmatterField(slug, 'cover', coverUrl, monthDir);
   }
 
   // 更新索引

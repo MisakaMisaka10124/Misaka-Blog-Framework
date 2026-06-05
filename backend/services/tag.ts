@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import type { TagIndex } from '../types';
 
-const TAGS_DIR = () => path.join(__dirname, '../data/config/tags');
+const TAGS_DIR = () => path.join(__dirname, '../data/posts/tags');
 
 /** 确保标签目录存在 */
 function ensureTagsDir() {

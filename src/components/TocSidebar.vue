@@ -126,7 +126,7 @@ onUnmounted(() => {
 
 .toc__link--active {
   color: var(--color-accent);
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(234, 179, 8, 0.1);
 }
 
 .toc__link--h3 { padding-left: 20px; }

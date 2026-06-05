@@ -45,7 +45,7 @@ router.get('/', dataLimiter, (req, res) => {
  */
 router.get('/:tag', dataLimiter, (req, res) => {
   try {
-    const { tag } = req.params;
+    const tag = req.params.tag as string;
     const slugs = getPostsByTag(tag);
     const index = readIndex();
     const posts = index.posts.filter(p => slugs.includes(p.slug));

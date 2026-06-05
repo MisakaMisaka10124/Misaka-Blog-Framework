@@ -10,9 +10,7 @@
           v-for="link in navLinks"
           :key="link.path"
           :to="link.path"
-          class="navbar__link"
-          active-class="navbar__link--active"
-          :exact="link.path === '/'"
+          :class="['navbar__link', { 'navbar__link--active': isLinkActive(link.path) }]"
         >
           {{ link.label }}
         </router-link>
@@ -69,9 +67,7 @@
           v-for="link in navLinks"
           :key="link.path"
           :to="link.path"
-          class="navbar__mobile-link"
-          active-class="navbar__mobile-link--active"
-          :exact="link.path === '/'"
+          :class="['navbar__mobile-link', { 'navbar__mobile-link--active': isLinkActive(link.path) }]"
           @click="mobileOpen = false"
         >
           {{ link.label }}
@@ -83,6 +79,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import ThemeToggle from '../components/ThemeToggle.vue'
 
@@ -100,8 +97,17 @@ defineEmits<{
   search: []
 }>()
 
+const route = useRoute()
 const isScrolled = ref(false)
 const mobileOpen = ref(false)
+
+// 判断链接是否激活
+function isLinkActive(path: string): boolean {
+  if (path === '/') {
+    return route.path === '/'
+  }
+  return route.path.startsWith(path)
+}
 
 // 检查是否已登录
 const isLoggedIn = computed(() => {

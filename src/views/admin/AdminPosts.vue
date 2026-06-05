@@ -338,7 +338,7 @@ async function confirmDelete() {
 .admin-posts__tag {
   display: inline-block;
   padding: 2px 8px;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
   color: var(--color-accent);
   border-radius: 3px;
   font-size: 0.8em;
@@ -361,7 +361,7 @@ async function confirmDelete() {
 }
 
 .admin-posts__action-btn--edit:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(234, 179, 8, 0.1);
 }
 
 .admin-posts__action-btn--delete {

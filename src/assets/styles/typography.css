@@ -65,7 +65,7 @@
 /* 引用块 */
 .markdown-body blockquote {
   border-left: 4px solid var(--color-accent);
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(234, 179, 8, 0.08);
   padding: 0.8em 1.2em;
   margin: 1em 0;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -156,6 +156,6 @@
 }
 
 .markdown-body .info {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
+  background: rgba(234, 179, 8, 0.1);
+  border-color: #eab308;
 }

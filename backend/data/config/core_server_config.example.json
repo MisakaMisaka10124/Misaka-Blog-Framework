@@ -75,7 +75,7 @@
     "mobileMinHeight": 320
   },
   "defaults": {
-    "avatar": "/images/avatars/avatar1.jpg",
+    "avatar": "/images/avatars/avatar.jpg",
     "friendAvatar": "/images/avatars/avatar1.jpg",
     "socialIcon": "/images/social/github.svg",
     "siteTitle": "Misaka"

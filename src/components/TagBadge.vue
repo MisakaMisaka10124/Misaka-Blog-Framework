@@ -26,9 +26,9 @@ withDefaults(defineProps<{
   padding: 2px 10px;
   font-size: 0.75em;
   border-radius: 12px;
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(234, 179, 8, 0.15);
   color: var(--color-accent);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(234, 179, 8, 0.25);
   transition: var(--transition-fast);
 }
 
@@ -37,7 +37,7 @@ withDefaults(defineProps<{
 }
 
 .tag-badge--clickable:hover {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(234, 179, 8, 0.3);
   color: var(--color-accent-hover);
 }
 </style>
