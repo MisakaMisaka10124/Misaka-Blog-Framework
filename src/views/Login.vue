@@ -64,7 +64,7 @@ async function handleLogin() {
       captchaText: captchaText.value,
     })
     localStorage.setItem('upload_token', data.token)
-    router.push('/upload')
+    router.push('/admin')
   } catch (e: any) {
     error.value = e.response?.data?.error || '登录失败'
     loadCaptcha()
@@ -80,7 +80,7 @@ onMounted(() => {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]))
       if (payload.exp * 1000 > Date.now()) {
-        router.replace('/upload')
+        router.replace('/admin')
         return
       }
     } catch {}

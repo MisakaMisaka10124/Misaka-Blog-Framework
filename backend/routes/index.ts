@@ -5,6 +5,7 @@ import postsRouter from './posts';
 import mdRouter from './md_html';
 import tagsRouter from './tags';
 import visitorRouter from './visitor';
+import adminRouter from './admin';
 
 const router = Router();
 
@@ -15,5 +16,6 @@ router.use('/posts', postsRouter);
 router.use('/md', mdRouter);
 router.use('/tags', tagsRouter);
 router.use('/visitor', visitorRouter);
+router.use('/admin', adminRouter);
 
 export default router;

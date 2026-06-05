@@ -111,6 +111,12 @@ app.get('/api/friendlinks', (req, res) => {
 // 静态文件：文章图片
 app.use('/images/posts', express.static(path.join(__dirname, './data/posts/images')));
 
+// 静态文件：管理后台上传的图片
+app.use('/images/avatars', express.static(path.join(__dirname, './data/images/avatars')));
+app.use('/images/friends', express.static(path.join(__dirname, './data/images/friends')));
+app.use('/images/social', express.static(path.join(__dirname, './data/images/social')));
+app.use('/images/uploads', express.static(path.join(__dirname, './data/images/uploads')));
+
 // API 路由
 app.use('/api', apiRouter);
 

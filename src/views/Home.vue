@@ -33,7 +33,7 @@
               rel="noopener"
               class="home__social-icon"
             >
-              <img :src="`/images/${link.icon}.svg`" :alt="link.platform" />
+              <img :src="`/images/social/${link.icon}.svg`" :alt="link.platform" />
             </a>
           </div>
         </GlassCard>

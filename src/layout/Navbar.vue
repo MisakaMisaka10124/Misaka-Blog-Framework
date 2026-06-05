@@ -19,6 +19,18 @@
 
       <!-- 右侧操作 -->
       <div class="navbar__actions">
+        <!-- 后台管理链接（已登录时显示） -->
+        <router-link
+          v-if="isLoggedIn"
+          to="/admin"
+          class="navbar__admin-link"
+          title="后台管理"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </router-link>
         <!-- 语言切换 -->
         <div class="navbar__lang" @click="toggleLangMenu" ref="langRef">
           <span class="navbar__lang-label">{{ currentLangLabel }}</span>
@@ -86,6 +98,18 @@ defineEmits<{
 
 const isScrolled = ref(false)
 const mobileOpen = ref(false)
+
+// 检查是否已登录
+const isLoggedIn = computed(() => {
+  const token = localStorage.getItem('upload_token')
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
+})
 
 // 语言切换
 const langOptions = [
@@ -232,6 +256,26 @@ onUnmounted(() => {
 }
 
 .navbar__btn:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.navbar__admin-link {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 1.1em;
+}
+
+.navbar__admin-link:hover {
   color: var(--color-text-primary);
   background: rgba(255, 255, 255, 0.08);
 }

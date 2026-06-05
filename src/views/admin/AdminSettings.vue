@@ -1,0 +1,551 @@
+<template>
+  <div class="admin-settings">
+    <h2 class="admin-settings__title">站点设置</h2>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="admin-settings__loading">
+      加载中...
+    </div>
+
+    <!-- 设置表单 -->
+    <form v-else class="admin-settings__form" @submit.prevent="handleSave">
+      <!-- 基本信息 -->
+      <div class="admin-settings__section">
+        <h3 class="admin-settings__section-title">基本信息</h3>
+
+        <div class="admin-settings__field">
+          <label>站点头像</label>
+          <div class="admin-settings__avatar-row">
+            <div v-if="avatarPreview" class="admin-settings__avatar-preview">
+              <img :src="avatarPreview" alt="头像预览" />
+            </div>
+            <div class="admin-settings__avatar-actions">
+              <input
+                ref="avatarInputRef"
+                type="file"
+                accept="image/*"
+                @change="handleAvatarSelect"
+                hidden
+              />
+              <button
+                type="button"
+                class="admin-settings__upload-btn"
+                @click="avatarInputRef?.click()"
+              >
+                上传头像
+              </button>
+              <span class="admin-settings__field-hint">
+                或输入URL:
+              </span>
+              <input
+                v-model="avatarUrl"
+                type="text"
+                placeholder="https://example.com/avatar.jpg"
+                class="admin-settings__url-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-settings__field">
+          <label>站点标题</label>
+          <input
+            v-model="siteTitle"
+            type="text"
+            placeholder="我的个人空间"
+          />
+        </div>
+
+        <div class="admin-settings__field">
+          <label>欢迎消息</label>
+          <input
+            v-model="welcomeMessage"
+            type="text"
+            placeholder="你好，欢迎来到我的空间！"
+          />
+        </div>
+
+        <div class="admin-settings__field">
+          <label>AI 聊天占位符</label>
+          <input
+            v-model="chatPlaceholder"
+            type="text"
+            placeholder="有什么想问 AI 的吗？"
+          />
+        </div>
+
+        <div class="admin-settings__field">
+          <label>个人简介</label>
+          <textarea
+            v-model="about"
+            rows="4"
+            placeholder="你的个人简介，会显示在首页左侧卡片中。"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Hero 区域 -->
+      <div class="admin-settings__section">
+        <h3 class="admin-settings__section-title">Hero 区域</h3>
+
+        <div class="admin-settings__field">
+          <label>个性签名</label>
+          <input
+            v-model="heroSubtitle"
+            type="text"
+            placeholder="你的个性签名"
+          />
+        </div>
+
+        <div class="admin-settings__field">
+          <label>背景图片</label>
+          <div class="admin-settings__backgrounds">
+            <div
+              v-for="(bg, index) in heroBackgrounds"
+              :key="index"
+              class="admin-settings__bg-item"
+            >
+              <input
+                v-model="heroBackgrounds[index]"
+                type="text"
+                :placeholder="`背景图片 ${index + 1} URL`"
+              />
+              <button
+                type="button"
+                class="admin-settings__bg-remove"
+                @click="removeBackground(index)"
+              >
+                ×
+              </button>
+            </div>
+            <button
+              v-if="heroBackgrounds.length < 6"
+              type="button"
+              class="admin-settings__bg-add"
+              @click="addBackground"
+            >
+              + 添加背景
+            </button>
+          </div>
+          <span class="admin-settings__field-hint">
+            建议使用 1920x1080 以上的图片，支持 jpg/png/webp 格式
+          </span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="admin-settings__section">
+        <h3 class="admin-settings__section-title">页脚信息</h3>
+
+        <div class="admin-settings__field">
+          <label>版权信息</label>
+          <input
+            v-model="footerCopyright"
+            type="text"
+            placeholder="2026 Your Name"
+          />
+        </div>
+
+        <div class="admin-settings__field">
+          <label>ICP 备案号</label>
+          <input
+            v-model="footerIcp"
+            type="text"
+            placeholder="京ICP备XXXXXXXX号"
+          />
+        </div>
+      </div>
+
+      <!-- 状态消息 -->
+      <p v-if="error" class="admin-settings__error">{{ error }}</p>
+      <p v-if="success" class="admin-settings__success">{{ success }}</p>
+
+      <!-- 操作按钮 -->
+      <div class="admin-settings__actions">
+        <button
+          type="submit"
+          class="admin-settings__save-btn"
+          :disabled="saving"
+        >
+          {{ saving ? '保存中...' : '保存设置' }}
+        </button>
+        <button
+          type="button"
+          class="admin-settings__reset-btn"
+          @click="loadSettings"
+        >
+          重置
+        </button>
+      </div>
+    </form>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+// 表单数据
+const siteTitle = ref('')
+const welcomeMessage = ref('')
+const chatPlaceholder = ref('')
+const about = ref('')
+const heroSubtitle = ref('')
+const heroBackgrounds = ref<string[]>([])
+const footerCopyright = ref('')
+const footerIcp = ref('')
+const avatarUrl = ref('')
+const avatarPreview = ref('')
+const avatarFile = ref<File | null>(null)
+
+// UI 状态
+const loading = ref(true)
+const saving = ref(false)
+const error = ref('')
+const success = ref('')
+
+const avatarInputRef = ref<HTMLInputElement | null>(null)
+
+// 加载设置
+async function loadSettings() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const { data } = await axios.get('/api/admin/config')
+
+    siteTitle.value = data.siteTitle || ''
+    welcomeMessage.value = data.welcomeMessage || ''
+    chatPlaceholder.value = data.chatPlaceholder || ''
+    about.value = data.about || ''
+    heroSubtitle.value = data.hero?.subtitle || ''
+    heroBackgrounds.value = data.hero?.backgroundImages || []
+    footerCopyright.value = data.footer?.copyright || ''
+    footerIcp.value = data.footer?.icp || ''
+
+    // 查找头像（从 socialLinks 或其他地方）
+    // 这里假设头像存储在某个特定位置，或者使用默认头像
+    avatarPreview.value = '/images/avatar1.jpg'
+  } catch (e: any) {
+    error.value = '加载设置失败: ' + (e.response?.data?.error || e.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 头像上传
+function handleAvatarSelect(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) {
+    avatarFile.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      avatarPreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// 背景图片管理
+function addBackground() {
+  heroBackgrounds.value.push('')
+}
+
+function removeBackground(index: number) {
+  heroBackgrounds.value.splice(index, 1)
+}
+
+// 保存设置
+async function handleSave() {
+  saving.value = true
+  error.value = ''
+  success.value = ''
+
+  try {
+    // 上传头像（如果有新头像）
+    if (avatarFile.value) {
+      const formData = new FormData()
+      formData.append('image', avatarFile.value)
+      const { data } = await axios.post('/api/admin/upload/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      avatarUrl.value = data.url
+    }
+
+    // 批量更新配置
+    const updates: Record<string, any> = {
+      siteTitle: siteTitle.value,
+      welcomeMessage: welcomeMessage.value,
+      chatPlaceholder: chatPlaceholder.value,
+      about: about.value,
+      hero: {
+        subtitle: heroSubtitle.value,
+        backgroundImages: heroBackgrounds.value.filter(Boolean),
+      },
+      footer: {
+        copyright: footerCopyright.value,
+        icp: footerIcp.value,
+      },
+    }
+
+    await axios.put('/api/admin/config/batch', updates)
+    success.value = '设置保存成功'
+  } catch (e: any) {
+    error.value = '保存失败: ' + (e.response?.data?.error || e.message)
+  } finally {
+    saving.value = false
+  }
+}
+
+// 生命周期
+onMounted(() => {
+  loadSettings()
+})
+</script>
+
+<style scoped>
+.admin-settings {
+  max-width: 800px;
+}
+
+.admin-settings__title {
+  font-size: 1.4em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xl);
+}
+
+.admin-settings__loading {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: var(--space-2xl);
+}
+
+/* 表单 */
+.admin-settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+}
+
+/* 区块 */
+.admin-settings__section {
+  background: var(--color-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.admin-settings__section-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 2px solid var(--color-accent);
+  display: inline-block;
+}
+
+/* 字段 */
+.admin-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.admin-settings__field:last-child {
+  margin-bottom: 0;
+}
+
+.admin-settings__field label {
+  font-size: 0.9em;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.admin-settings__field input[type='text'],
+.admin-settings__field textarea {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-text-primary);
+  font-size: 0.95em;
+  outline: none;
+  transition: var(--transition-fast);
+}
+
+.admin-settings__field input:focus,
+.admin-settings__field textarea:focus {
+  border-color: var(--color-accent);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-settings__field-hint {
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+}
+
+/* 头像 */
+.admin-settings__avatar-row {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: flex-start;
+}
+
+.admin-settings__avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--glass-border);
+  flex-shrink: 0;
+}
+
+.admin-settings__avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-settings__avatar-actions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.admin-settings__upload-btn {
+  align-self: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.admin-settings__upload-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-settings__url-input {
+  width: 100%;
+}
+
+/* 背景图片 */
+.admin-settings__backgrounds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.admin-settings__bg-item {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.admin-settings__bg-item input {
+  flex: 1;
+}
+
+.admin-settings__bg-remove {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+  color: #ef4444;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.admin-settings__bg-remove:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.admin-settings__bg-add {
+  align-self: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.admin-settings__bg-add:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+/* 状态消息 */
+.admin-settings__error {
+  color: #ef4444;
+  font-size: 0.9em;
+}
+
+.admin-settings__success {
+  color: #22c55e;
+  font-size: 0.9em;
+}
+
+/* 操作按钮 */
+.admin-settings__actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.admin-settings__save-btn {
+  padding: var(--space-sm) var(--space-xl);
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.admin-settings__save-btn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.admin-settings__save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-settings__reset-btn {
+  padding: var(--space-sm) var(--space-lg);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.admin-settings__reset-btn:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-text-muted);
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .admin-settings__avatar-row {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+</style>
