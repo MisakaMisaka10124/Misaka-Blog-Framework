@@ -31,7 +31,7 @@ const queryUrl = computed(() => {
 
 <style scoped>
 .footer {
-  background: rgba(10, 10, 26, 0.6);
+  background: rgba(17, 17, 17, 0.7);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(255, 255, 255, 0.06);

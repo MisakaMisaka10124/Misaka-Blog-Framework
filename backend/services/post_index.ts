@@ -31,8 +31,9 @@ function extractMeta(filename: string, content: string): PostMeta {
   // 封面图
   const cover = frontmatter.cover || frontmatter.image || '';
 
-  // 标签
-  const tags: string[] = frontmatter.tags || frontmatter.categories || [];
+  // 标签（确保始终为字符串数组）
+  const rawTags = frontmatter.tags || frontmatter.categories || [];
+  const tags: string[] = Array.isArray(rawTags) ? rawTags.map(t => String(t)) : [];
 
   // 日期
   const date = frontmatter.date

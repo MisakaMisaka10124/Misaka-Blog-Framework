@@ -505,10 +505,15 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  cursor: auto;
+}
+
+.admin-friends__dialog-overlay * {
+  cursor: auto;
 }
 
 .admin-friends__dialog {
-  background: var(--color-surface);
+  background: var(--admin-dialog-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);

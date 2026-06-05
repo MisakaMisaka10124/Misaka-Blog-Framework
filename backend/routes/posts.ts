@@ -166,21 +166,23 @@ router.post('/upload', verifyToken, upload.fields([
     try { fs.rmdirSync(tempDir); } catch {}
   }
 
-  // 处理标签
+  // 处理标签（从表单和 frontmatter 两处获取，取并集）
   const tagsStr = req.body.tags || '';
-  const tags = tagsStr.split(',').map((t: string) => t.trim()).filter(Boolean);
+  const formTags = tagsStr.split(',').map((t: string) => t.trim()).filter(Boolean);
 
   // 更新文章索引（在写入 cover 之后，这样索引能读到 cover）
   const meta = addOrUpdatePost(slug);
 
-  // 同步标签索引
-  syncTagsForPost(slug, tags, []);
+  // 同步标签索引（使用 frontmatter 中的标签，确保一致性）
+  const metaTags = (meta?.tags || []).map(t => String(t));
+  const allTags = [...new Set([...metaTags, ...formTags])];
+  syncTagsForPost(slug, allTags, []);
 
   res.json({
     message: '文件上传成功',
     slug,
     cover: coverUrl,
-    tags,
+    tags: allTags,
     meta
   });
 });
@@ -459,9 +461,11 @@ router.put('/:slug', verifyToken, (req: any, res, next) => {
   // 更新索引
   const meta = addOrUpdatePost(slug);
 
-  // 同步标签
+  // 同步标签（确保新旧标签对比正确）
   if (meta) {
-    syncTagsForPost(slug, meta.tags, oldTags);
+    const newTags = meta.tags.map(t => String(t));
+    const oldTagsStr = oldTags.map(t => String(t));
+    syncTagsForPost(slug, newTags, oldTagsStr);
   }
 
   res.json({ message: '更新成功', slug, meta });

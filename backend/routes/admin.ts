@@ -540,6 +540,14 @@ router.get('/social/icons', (req, res) => {
     { id: 'bilibili', name: 'Bilibili', url: '/images/social/bilibili.svg' },
     { id: 'twitter', name: 'Twitter/X', url: '/images/social/twitter.svg' },
     { id: 'email', name: '邮箱', url: '/images/social/email.svg' },
+    { id: 'qq', name: 'QQ', url: '/images/social/qq.svg' },
+    { id: 'wechat', name: '微信', url: '/images/social/wechat.svg' },
+    { id: 'telegram', name: 'Telegram', url: '/images/social/telegram.svg' },
+    { id: 'discord', name: 'Discord', url: '/images/social/discord.svg' },
+    { id: 'youtube', name: 'YouTube', url: '/images/social/youtube.svg' },
+    { id: 'steam', name: 'Steam', url: '/images/social/steam.svg' },
+    { id: 'instagram', name: 'Instagram', url: '/images/social/instagram.svg' },
+    { id: 'weibo', name: '微博', url: '/images/social/weibo.svg' },
   ];
 
   res.json({ icons });

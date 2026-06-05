@@ -12,6 +12,7 @@
           :to="link.path"
           class="navbar__link"
           active-class="navbar__link--active"
+          :exact="link.path === '/'"
         >
           {{ link.label }}
         </router-link>
@@ -69,6 +70,8 @@
           :key="link.path"
           :to="link.path"
           class="navbar__mobile-link"
+          active-class="navbar__mobile-link--active"
+          :exact="link.path === '/'"
           @click="mobileOpen = false"
         >
           {{ link.label }}
@@ -191,7 +194,7 @@ onUnmounted(() => {
 }
 
 .navbar.scrolled {
-  background: rgba(10, 10, 26, 0.8);
+  background: rgba(17, 17, 17, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -323,7 +326,7 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: rgba(20, 20, 40, 0.95);
+  background: rgba(30, 30, 30, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
@@ -422,7 +425,7 @@ onUnmounted(() => {
 
 .navbar__mobile {
   display: none;
-  background: rgba(10, 10, 26, 0.95);
+  background: rgba(17, 17, 17, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: var(--space-lg);

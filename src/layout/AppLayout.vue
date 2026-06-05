@@ -271,7 +271,7 @@ onUnmounted(() => {
 }
 
 @media (pointer: fine) {
-  * {
+  .app-layout * {
     cursor: none !important;
   }
   .custom-cursor {

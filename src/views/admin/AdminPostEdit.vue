@@ -345,10 +345,11 @@ function parseFrontmatter(raw: string) {
     if (m) {
       let val: any = m[2].trim()
       if (val.startsWith('[') && val.endsWith(']')) {
+        // 解析数组：去除引号，过滤空值
         val = val
           .slice(1, -1)
           .split(',')
-          .map((s: string) => s.trim())
+          .map((s: string) => s.trim().replace(/^["']|["']$/g, ''))
           .filter(Boolean)
       }
       data[m[1]] = val
@@ -636,12 +637,13 @@ async function handleSave() {
   saving.value = true
 
   try {
-    // 构建 frontmatter
+    // 构建 frontmatter（标签值加引号，防止 YAML 解析问题）
+    const quotedTags = tags.value.map(t => `"${String(t).replace(/"/g, '\\"')}"`)
     const fmLines = [
       '---',
       `title: ${yamlEscape(title.value)}`,
       `summary: ${yamlEscape(summary.value || '')}`,
-      `tags: [${tags.value.join(', ')}]`,
+      `tags: [${quotedTags.join(', ')}]`,
       `date: ${new Date().toISOString().split('T')[0]}`,
     ]
     if (coverName.value) {
@@ -918,7 +920,7 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   right: 0;
-  background: rgba(30, 30, 50, 0.95);
+  background: rgba(30, 30, 30, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);

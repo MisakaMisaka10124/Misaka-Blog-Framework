@@ -126,7 +126,9 @@ async function loadData() {
         pageSize.value = serverConfigRes.data.display.homePostsPerPage
       }
       if (serverConfigRes.data.defaults?.avatar) {
-        defaultAvatar.value = serverConfigRes.data.defaults.avatar
+        // 加时间戳防止浏览器缓存旧头像
+        const avatar = serverConfigRes.data.defaults.avatar
+        defaultAvatar.value = avatar.includes('?') ? avatar : `${avatar}?t=${Date.now()}`
       }
     } catch {
       // 使用默认值

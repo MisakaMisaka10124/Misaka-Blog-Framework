@@ -1,7 +1,7 @@
 :root {
   /* 玻璃拟态 */
   --glass-bg: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.15);
   --glass-blur: blur(12px) saturate(180%);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 
@@ -12,12 +12,12 @@
   --radius-xl: 24px;
 
   /* 颜色 */
-  --color-bg: #0a0a1a;
-  --color-bg-secondary: #12122a;
-  --color-surface: rgba(18, 18, 42, 0.8);
+  --color-bg: #111111;
+  --color-bg-secondary: #1a1a1a;
+  --color-surface: rgba(26, 26, 26, 0.85);
   --color-text-primary: #e8e8e8;
-  --color-text-secondary: #b0b0c8;
-  --color-text-muted: #a0a0b8;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted: #808080;
   --color-accent: #3b82f6;
   --color-accent-hover: #60a5fa;
 
@@ -54,12 +54,13 @@
   --article-max-width: 800px;
 
   /* 后台管理 */
-  --admin-sidebar-bg: rgba(10, 10, 26, 0.85);
-  --admin-header-bg: rgba(10, 10, 26, 0.6);
-  --admin-border: rgba(255, 255, 255, 0.06);
+  --admin-sidebar-bg: rgba(17, 17, 17, 0.92);
+  --admin-header-bg: rgba(17, 17, 17, 0.7);
+  --admin-border: rgba(255, 255, 255, 0.08);
   --admin-hover-bg: rgba(255, 255, 255, 0.06);
   --admin-active-bg: rgba(255, 255, 255, 0.1);
-  --admin-card-bg: rgba(255, 255, 255, 0.03);
+  --admin-card-bg: rgba(255, 255, 255, 0.04);
+  --admin-dialog-bg: #1e1e1e;
 }
 
 [data-theme="light"] {
@@ -79,4 +80,5 @@
   --admin-hover-bg: rgba(0, 0, 0, 0.04);
   --admin-active-bg: rgba(0, 0, 0, 0.08);
   --admin-card-bg: rgba(0, 0, 0, 0.02);
+  --admin-dialog-bg: #ffffff;
 }
