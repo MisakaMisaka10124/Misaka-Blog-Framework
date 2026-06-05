@@ -119,7 +119,7 @@
               </button>
             </div>
             <button
-              v-if="heroBackgrounds.length < 6"
+              v-if="heroBackgrounds.length < maxHeroBackgrounds"
               type="button"
               class="admin-settings__bg-add"
               @click="addBackground"
@@ -197,6 +197,8 @@ const footerIcp = ref('')
 const avatarUrl = ref('')
 const avatarPreview = ref('')
 const avatarFile = ref<File | null>(null)
+const maxHeroBackgrounds = ref(6)
+const defaultAvatar = ref('/images/avatar1.jpg')
 
 // UI 状态
 const loading = ref(true)
@@ -225,7 +227,7 @@ async function loadSettings() {
 
     // 查找头像（从 socialLinks 或其他地方）
     // 这里假设头像存储在某个特定位置，或者使用默认头像
-    avatarPreview.value = '/images/avatar1.jpg'
+    avatarPreview.value = defaultAvatar.value
   } catch (e: any) {
     error.value = '加载设置失败: ' + (e.response?.data?.error || e.message)
   } finally {
@@ -297,9 +299,25 @@ async function handleSave() {
   }
 }
 
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.display?.maxHeroBackgrounds) {
+      maxHeroBackgrounds.value = data.display.maxHeroBackgrounds
+    }
+    if (data.defaults?.avatar) {
+      defaultAvatar.value = data.defaults.avatar
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
 // 生命周期
 onMounted(() => {
   loadSettings()
+  loadServerConfig()
 })
 </script>
 

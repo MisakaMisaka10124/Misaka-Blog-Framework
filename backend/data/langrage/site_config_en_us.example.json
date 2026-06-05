@@ -3,6 +3,7 @@
   "welcomeMessage": "Hello, welcome to my space!",
   "chatPlaceholder": "Ask AI anything?",
   "about": "A brief introduction about yourself, displayed on the homepage sidebar.",
+  "aboutContent": "<h2>Hi there</h2>\n<p>This is your name, a developer who loves technology.</p>\n<p>This website is my personal space for recording technical notes, sharing projects and life insights.</p>\n\n<h3>Tech Stack</h3>\n<ol>\n  <li>Frontend: Vue 3 / TypeScript / Vite</li>\n  <li>Backend: Node.js / Express</li>\n</ol>\n\n<h3>Contact Me</h3>\n<p>You can find me through the social links at the bottom of the page, or send me an email directly.</p>",
   "navLinks": [
     {"label": "Home", "path": "/"},
     {"label": "Blog", "path": "/categories"},

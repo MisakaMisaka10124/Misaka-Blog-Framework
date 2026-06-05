@@ -80,6 +80,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import axios from 'axios'
 import ThemeToggle from '../components/ThemeToggle.vue'
 
 interface NavLink {
@@ -112,17 +113,17 @@ const isLoggedIn = computed(() => {
 })
 
 // 语言切换
-const langOptions = [
+const langOptions = ref([
   { value: 'zh_cn', label: '中' },
   { value: 'en_us', label: 'EN' },
   { value: 'zh_hk', label: '繁' },
-]
+])
 const currentLang = ref(localStorage.getItem('site_lang') || 'zh_cn')
 const langMenuOpen = ref(false)
 const langRef = ref<HTMLElement | null>(null)
 
 const currentLangLabel = computed(() => {
-  return langOptions.find(l => l.value === currentLang.value)?.label || '中'
+  return langOptions.value.find(l => l.value === currentLang.value)?.label || '中'
 })
 
 function toggleLangMenu() {
@@ -146,9 +147,29 @@ function handleScroll() {
   isScrolled.value = window.scrollY > 20
 }
 
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.defaults?.availableLanguages) {
+      langOptions.value = data.defaults.availableLanguages
+    }
+    if (data.defaults?.language) {
+      const savedLang = localStorage.getItem('site_lang')
+      if (!savedLang) {
+        currentLang.value = data.defaults.language
+        localStorage.setItem('site_lang', data.defaults.language)
+      }
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true })
   document.addEventListener('click', handleClickOutside)
+  loadServerConfig()
 })
 
 onUnmounted(() => {

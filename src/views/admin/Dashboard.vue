@@ -173,13 +173,25 @@ const stats = ref({
 const recentPosts = ref<PostMeta[]>([])
 
 onMounted(async () => {
+  let dashboardRecentPostsCount = 5
+
+  try {
+    // 获取服务器配置
+    const { data: serverConfig } = await axios.get('/api/server-config')
+    if (serverConfig.display?.dashboardRecentPostsCount) {
+      dashboardRecentPostsCount = serverConfig.display.dashboardRecentPostsCount
+    }
+  } catch (e) {
+    console.warn('Failed to load server config:', e)
+  }
+
   try {
     // 获取文章索引
     const { data: indexData } = await axios.get('/api/posts/index')
     stats.value.totalPosts = indexData.posts?.length || 0
     recentPosts.value = (indexData.posts || [])
       .sort((a: PostMeta, b: PostMeta) => b.date.localeCompare(a.date))
-      .slice(0, 5)
+      .slice(0, dashboardRecentPostsCount)
   } catch (e) {
     console.warn('Failed to load posts:', e)
   }

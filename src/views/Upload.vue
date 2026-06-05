@@ -338,12 +338,15 @@ function removeTag(index: number) {
   editTags.value.splice(index, 1)
 }
 
+// 标签建议数配置
+const maxTagSuggestions = ref(8)
+
 function onTagInput() {
   const q = newTag.value.trim().toLowerCase()
   if (!q) { tagSuggestions.value = []; return }
   tagSuggestions.value = allTags.value
     .filter(t => t.toLowerCase().includes(q) && !editTags.value.includes(t))
-    .slice(0, 8)
+    .slice(0, maxTagSuggestions.value)
 }
 
 function selectTag(tag: string) {
@@ -392,6 +395,10 @@ function insertMd(before: string, after: string) {
 
 function insertTab() { insertMd('  ', '') }
 
+// 图片压缩配置
+const imageCompressionMaxWidth = ref(1920)
+const imageCompressionQuality = ref(0.82)
+
 async function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
     const reader = new FileReader()
@@ -400,14 +407,14 @@ async function compressImage(file: File): Promise<File> {
       img.onload = () => {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')!
-        const maxWidth = 1920
+        const maxWidth = imageCompressionMaxWidth.value
         let { width, height } = img
         if (width > maxWidth) { height = Math.round((height / width) * maxWidth); width = maxWidth }
         canvas.width = width; canvas.height = height
         ctx.drawImage(img, 0, 0, width, height)
         canvas.toBlob(
           (blob) => resolve(blob ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }) : file),
-          'image/jpeg', 0.82,
+          'image/jpeg', imageCompressionQuality.value,
         )
       }
       img.src = e.target?.result as string
@@ -524,9 +531,28 @@ function logout() {
   router.push('/login')
 }
 
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.display?.maxTagSuggestions) {
+      maxTagSuggestions.value = data.display.maxTagSuggestions
+    }
+    if (data.imageCompression?.maxWidth) {
+      imageCompressionMaxWidth.value = data.imageCompression.maxWidth
+    }
+    if (data.imageCompression?.quality) {
+      imageCompressionQuality.value = data.imageCompression.quality
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
 onMounted(() => {
   loadArticles()
   loadAllTags()
+  loadServerConfig()
 })
 
 onUnmounted(() => { stopEditTimer() })

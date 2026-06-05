@@ -49,10 +49,10 @@ const tags = ref<TagInfo[]>([])
 const posts = ref<PostMeta[]>([])
 const loading = ref(true)
 const currentPage = ref(1)
-const pageSize = 5
+const pageSize = ref(5)
 
-const totalPages = computed(() => Math.ceil(posts.value.length / pageSize))
-const pagedPosts = computed(() => posts.value.slice((currentPage.value - 1) * pageSize, currentPage.value * pageSize))
+const totalPages = computed(() => Math.ceil(posts.value.length / pageSize.value))
+const pagedPosts = computed(() => posts.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value))
 
 const pageNumbers = computed(() => {
   const total = totalPages.value
@@ -68,12 +68,18 @@ const pageNumbers = computed(() => {
 
 async function loadData() {
   try {
-    const [tagsRes, indexRes] = await Promise.all([
+    const [tagsRes, indexRes, serverConfigRes] = await Promise.all([
       axios.get('/api/tags'),
       axios.get('/api/posts/index'),
+      axios.get('/api/server-config').catch(() => ({ data: {} }))
     ])
     tags.value = tagsRes.data.tags || []
     posts.value = indexRes.data.posts || []
+
+    // 从服务器配置获取分页大小
+    if (serverConfigRes.data.display?.categoriesPostsPerPage) {
+      pageSize.value = serverConfigRes.data.display.categoriesPostsPerPage
+    }
   } catch (e) {
     console.warn('Failed to load categories:', e)
   } finally {

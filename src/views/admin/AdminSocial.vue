@@ -2,11 +2,11 @@
   <div class="admin-social">
     <div class="admin-social__header">
       <h2 class="admin-social__title">社交媒体管理</h2>
-      <span class="admin-social__count">{{ socialLinks.length }}/4</span>
+      <span class="admin-social__count">{{ socialLinks.length }}/{{ maxSocialLinks }}</span>
     </div>
 
     <p class="admin-social__hint">
-      最多可添加 4 个社交媒体链接，支持常见平台如 GitHub、Bilibili、Twitter、QQ空间等。
+      最多可添加 {{ maxSocialLinks }} 个社交媒体链接，支持常见平台如 GitHub、Bilibili、Twitter、QQ空间等。
     </p>
 
     <!-- 社交媒体列表 -->
@@ -57,7 +57,7 @@
 
     <!-- 添加按钮 -->
     <button
-      v-if="socialLinks.length < 4"
+      v-if="socialLinks.length < maxSocialLinks"
       class="admin-social__add-btn"
       @click="showDialog = true"
     >
@@ -211,6 +211,8 @@ const deletingIndex = ref<number | null>(null)
 const saving = ref(false)
 const error = ref('')
 const success = ref('')
+const maxSocialLinks = ref(4)
+const defaultSocialIcon = ref('/images/social/github.svg')
 
 const formData = ref<SocialLink>({
   platform: '',
@@ -220,7 +222,7 @@ const formData = ref<SocialLink>({
 
 // 获取图标URL
 function getIconUrl(icon: string): string {
-  if (!icon) return '/images/social/github.svg'
+  if (!icon) return defaultSocialIcon.value
   if (icon.startsWith('http')) return icon
   return `/images/social/${icon}.svg`
 }
@@ -228,7 +230,7 @@ function getIconUrl(icon: string): string {
 // 图标加载失败处理
 function handleIconError(e: Event) {
   const img = e.target as HTMLImageElement
-  img.src = '/images/social/github.svg'
+  img.src = defaultSocialIcon.value
 }
 
 // 选择图标
@@ -253,13 +255,27 @@ async function loadIcons() {
     availableIcons.value = data.icons || []
   } catch (e: any) {
     console.warn('Failed to load icons:', e)
-    // 使用默认图标列表
-    availableIcons.value = [
-      { id: 'github', name: 'GitHub', url: '/images/social/github.svg' },
-      { id: 'bilibili', name: 'Bilibili', url: '/images/social/bilibili.svg' },
-      { id: 'twitter', name: 'Twitter/X', url: '/images/social/twitter.svg' },
-      { id: 'email', name: '邮箱', url: '/images/social/email.svg' },
-    ]
+    // 使用默认图标列表（从服务器配置或硬编码）
+    try {
+      const { data: serverConfig } = await axios.get('/api/server-config')
+      if (serverConfig.fallbackImages?.socialIcons) {
+        availableIcons.value = serverConfig.fallbackImages.socialIcons
+      } else {
+        availableIcons.value = [
+          { id: 'github', name: 'GitHub', url: '/images/social/github.svg' },
+          { id: 'bilibili', name: 'Bilibili', url: '/images/social/bilibili.svg' },
+          { id: 'twitter', name: 'Twitter/X', url: '/images/social/twitter.svg' },
+          { id: 'email', name: '邮箱', url: '/images/social/email.svg' },
+        ]
+      }
+    } catch {
+      availableIcons.value = [
+        { id: 'github', name: 'GitHub', url: '/images/social/github.svg' },
+        { id: 'bilibili', name: 'Bilibili', url: '/images/social/bilibili.svg' },
+        { id: 'twitter', name: 'Twitter/X', url: '/images/social/twitter.svg' },
+        { id: 'email', name: '邮箱', url: '/images/social/email.svg' },
+      ]
+    }
   }
 }
 
@@ -311,8 +327,8 @@ async function handleSave() {
       socialLinks.value[editingIndex.value] = { ...formData.value }
     } else {
       // 添加
-      if (socialLinks.value.length >= 4) {
-        error.value = '最多只能添加 4 个社交媒体链接'
+      if (socialLinks.value.length >= maxSocialLinks.value) {
+        error.value = `最多只能添加 ${maxSocialLinks.value} 个社交媒体链接`
         return
       }
       socialLinks.value.push({ ...formData.value })
@@ -339,10 +355,26 @@ function handleCancel() {
   formData.value = { platform: '', url: '', icon: '' }
 }
 
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.display?.maxSocialLinks) {
+      maxSocialLinks.value = data.display.maxSocialLinks
+    }
+    if (data.defaults?.socialIcon) {
+      defaultSocialIcon.value = data.defaults.socialIcon
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
 // 生命周期
 onMounted(() => {
   loadSocialLinks()
   loadIcons()
+  loadServerConfig()
 })
 </script>
 

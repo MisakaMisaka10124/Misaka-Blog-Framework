@@ -81,6 +81,35 @@ app.get('/api/config', (req, res) => {
 
 /**
  * @openapi
+ * /api/server-config:
+ *   get:
+ *     tags: [System]
+ *     summary: 获取服务器配置
+ *     description: 返回前端需要的服务器配置参数（不含敏感信息）
+ *     responses:
+ *       200:
+ *         description: 成功获取服务器配置
+ */
+app.get('/api/server-config', (req, res) => {
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    // 只返回前端需要的非敏感配置
+    const publicConfig: Record<string, any> = {};
+
+    if (config.display) publicConfig.display = config.display;
+    if (config.imageCompression) publicConfig.imageCompression = config.imageCompression;
+    if (config.hero) publicConfig.hero = config.hero;
+    if (config.defaults) publicConfig.defaults = config.defaults;
+    if (config.fallbackImages) publicConfig.fallbackImages = config.fallbackImages;
+
+    res.json(publicConfig);
+  } catch (e) {
+    res.status(500).json({ error: '服务器配置读取失败' });
+  }
+});
+
+/**
+ * @openapi
  * /api/friendlinks:
  *   get:
  *     tags: [System]
@@ -111,11 +140,17 @@ app.get('/api/friendlinks', (req, res) => {
 // 静态文件：文章图片
 app.use('/images/posts', express.static(path.join(__dirname, './data/posts/images')));
 
-// 静态文件：管理后台上传的图片
+// 静态文件：管理后台上传的图片（用户上传的优先，fallback到dist中的默认图片）
 app.use('/images/avatars', express.static(path.join(__dirname, './data/images/avatars')));
+app.use('/images/avatars', express.static(path.join(__dirname, '../dist/images')));
 app.use('/images/friends', express.static(path.join(__dirname, './data/images/friends')));
+app.use('/images/friends', express.static(path.join(__dirname, '../dist/images/friends')));
 app.use('/images/social', express.static(path.join(__dirname, './data/images/social')));
+app.use('/images/social', express.static(path.join(__dirname, '../dist/images/social')));
 app.use('/images/uploads', express.static(path.join(__dirname, './data/images/uploads')));
+
+// 静态文件：其他默认图片（背景图、头像等）
+app.use('/images', express.static(path.join(__dirname, '../dist/images')));
 
 // API 路由
 app.use('/api', apiRouter);

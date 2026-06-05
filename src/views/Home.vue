@@ -6,8 +6,8 @@
         <GlassCard class="home__profile-card">
           <!-- 头像居中 -->
           <div class="home__profile-header">
-            <img src="/images/avatar1.jpg" alt="avatar" class="home__avatar" />
-            <h2 class="home__profile-name">Misaka10124</h2>
+            <img :src="defaultAvatar" alt="avatar" class="home__avatar" />
+            <h2 class="home__profile-name">{{ config.siteTitle || 'Misaka10124' }}</h2>
             <p class="home__profile-tagline">{{ config.hero?.subtitle || config.welcomeMessage }}</p>
           </div>
 
@@ -81,7 +81,8 @@ const config = ref<SiteConfig>({
 
 const posts = ref<PostMeta[]>([])
 const currentPage = ref(1)
-const pageSize = 5
+const pageSize = ref(5)
+const defaultAvatar = ref('/images/avatar1.jpg')
 
 function socialUrl(link: { platform: string; url: string }): string {
   if (link.platform === 'email') {
@@ -90,11 +91,11 @@ function socialUrl(link: { platform: string; url: string }): string {
   return link.url
 }
 
-const totalPages = computed(() => Math.ceil(posts.value.length / pageSize))
+const totalPages = computed(() => Math.ceil(posts.value.length / pageSize.value))
 
 const pagedPosts = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return posts.value.slice(start, start + pageSize)
+  const start = (currentPage.value - 1) * pageSize.value
+  return posts.value.slice(start, start + pageSize.value)
 })
 
 const pageNumbers = computed(() => {
@@ -117,6 +118,19 @@ async function loadData() {
     ])
     config.value = configRes.data
     posts.value = indexRes.data.posts || []
+
+    // 从服务器配置获取分页大小和默认头像
+    try {
+      const serverConfigRes = await axios.get('/api/server-config')
+      if (serverConfigRes.data.display?.homePostsPerPage) {
+        pageSize.value = serverConfigRes.data.display.homePostsPerPage
+      }
+      if (serverConfigRes.data.defaults?.avatar) {
+        defaultAvatar.value = serverConfigRes.data.defaults.avatar
+      }
+    } catch {
+      // 使用默认值
+    }
   } catch (e) {
     console.warn('Failed to load data:', e)
   }

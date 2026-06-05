@@ -410,6 +410,9 @@ function removeTag(index: number) {
   tags.value.splice(index, 1)
 }
 
+// 标签建议数配置
+const maxTagSuggestions = ref(8)
+
 function onTagInput() {
   const q = newTag.value.trim().toLowerCase()
   if (!q) {
@@ -418,7 +421,7 @@ function onTagInput() {
   }
   tagSuggestions.value = allTags.value
     .filter((t) => t.toLowerCase().includes(q) && !tags.value.includes(t))
-    .slice(0, 8)
+    .slice(0, maxTagSuggestions.value)
 }
 
 function selectTag(tag: string) {
@@ -489,6 +492,28 @@ function insertTab() {
   insertMd('  ', '')
 }
 
+// 图片压缩配置
+const imageCompressionMaxWidth = ref(1920)
+const imageCompressionQuality = ref(0.82)
+
+// 加载图片压缩配置
+async function loadCompressionConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.imageCompression?.maxWidth) {
+      imageCompressionMaxWidth.value = data.imageCompression.maxWidth
+    }
+    if (data.imageCompression?.quality) {
+      imageCompressionQuality.value = data.imageCompression.quality
+    }
+    if (data.display?.maxTagSuggestions) {
+      maxTagSuggestions.value = data.display.maxTagSuggestions
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
 // 图片处理
 async function compressImage(file: File): Promise<File> {
   return new Promise((resolve) => {
@@ -498,7 +523,7 @@ async function compressImage(file: File): Promise<File> {
       img.onload = () => {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')!
-        const maxWidth = 1920
+        const maxWidth = imageCompressionMaxWidth.value
         let { width, height } = img
         if (width > maxWidth) {
           height = Math.round((height / width) * maxWidth)
@@ -517,7 +542,7 @@ async function compressImage(file: File): Promise<File> {
                 : file
             ),
           'image/jpeg',
-          0.82
+          imageCompressionQuality.value
         )
       }
       img.src = e.target?.result as string
@@ -676,6 +701,7 @@ function handleCancel() {
 // 生命周期
 onMounted(() => {
   loadAllTags()
+  loadCompressionConfig()
   startEditTimer()
 
   if (isEditing.value) {

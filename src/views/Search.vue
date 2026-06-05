@@ -56,10 +56,10 @@ const results = ref<PostMeta[]>([])
 const searched = ref(false)
 const allTags = ref<{ tag: string; count: number }[]>([])
 const currentPage = ref(1)
-const pageSize = 10
+const pageSize = ref(10)
 
-const totalPages = computed(() => Math.ceil(results.value.length / pageSize))
-const pagedResults = computed(() => results.value.slice((currentPage.value - 1) * pageSize, currentPage.value * pageSize))
+const totalPages = computed(() => Math.ceil(results.value.length / pageSize.value))
+const pagedResults = computed(() => results.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value))
 
 const pageNumbers = computed(() => {
   const total = totalPages.value
@@ -115,7 +115,22 @@ async function loadTags() {
   }
 }
 
-onMounted(loadTags)
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.display?.searchResultsPerPage) {
+      pageSize.value = data.display.searchResultsPerPage
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
+onMounted(() => {
+  loadTags()
+  loadServerConfig()
+})
 </script>
 
 <style scoped>

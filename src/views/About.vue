@@ -25,24 +25,18 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import GlassCard from '../components/GlassCard.vue'
 
-const content = ref(`
-<h2>Hi there</h2>
-<p>这里是Misaka10124，一个热爱技术的开发者。</p>
-<p>这个网站是我的个人空间，用来记录技术笔记、分享项目和一些生活感悟。</p>
-
-<h3>技术栈</h3>
-<ol>
-  <li>前端：Vue 3 / TypeScript / Vite</li>
-  <li>后端：Node.js / Express</li>
-</ol>
-
-<h3>联系我</h3>
-<p>可以通过页面底部的社交链接找到我，或者直接发邮件。</p>
-`)
-
+const content = ref('')
 const visitor = ref<{ ip: string; countryCode: string; todayVisitors: number; totalVisitors: number; todayPosts: number } | null>(null)
 
 onMounted(async () => {
+  try {
+    const { data } = await axios.get('/api/config')
+    content.value = data.aboutContent || data.about || ''
+  } catch {
+    // 静默失败，使用默认内容
+    content.value = '<h2>Hi there</h2><p>欢迎来到我的个人空间。</p>'
+  }
+
   try {
     const { data } = await axios.get('/api/visitor/stats')
     visitor.value = data

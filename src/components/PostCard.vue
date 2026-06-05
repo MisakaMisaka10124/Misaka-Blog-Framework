@@ -8,7 +8,7 @@
       <p class="post-card__summary">{{ post.summary }}</p>
       <div class="post-card__meta">
         <span class="post-card__date">{{ post.date }}</span>
-        <span class="post-card__words">{{ post.wordCount }} 字</span>
+        <span class="post-card__words">{{ post.wordCount }} {{ wordCountUnit }}</span>
         <span class="post-card__readtime">{{ post.readTime }}</span>
       </div>
       <div v-if="post.tags?.length" class="post-card__tags">
@@ -19,12 +19,32 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 import type { PostMeta } from '../types'
 import TagBadge from './TagBadge.vue'
 
 defineProps<{
   post: PostMeta
 }>()
+
+const wordCountUnit = ref('字')
+
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.display?.wordCountUnit) {
+      wordCountUnit.value = data.display.wordCountUnit
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
+onMounted(() => {
+  loadServerConfig()
+})
 </script>
 
 <style scoped>

@@ -23,7 +23,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import axios from 'axios'
 
 const props = defineProps<{
   title: string
@@ -34,11 +35,35 @@ const props = defineProps<{
   readTime?: string
 }>()
 
+const minHeight = ref(420)
+const mobileMinHeight = ref(320)
+
 const bgStyle = computed(() => {
+  const style: Record<string, string> = {}
   if (props.coverImage) {
-    return { backgroundImage: `url(${props.coverImage})` }
+    style.backgroundImage = `url(${props.coverImage})`
   }
-  return {}
+  style.minHeight = `${minHeight.value}px`
+  return style
+})
+
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.hero?.minHeight) {
+      minHeight.value = data.hero.minHeight
+    }
+    if (data.hero?.mobileMinHeight) {
+      mobileMinHeight.value = data.hero.mobileMinHeight
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
+onMounted(() => {
+  loadServerConfig()
 })
 </script>
 
@@ -46,7 +71,6 @@ const bgStyle = computed(() => {
 .hero {
   position: relative;
   width: 100%;
-  min-height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -104,7 +128,6 @@ const bgStyle = computed(() => {
 }
 
 @media (max-width: 768px) {
-  .hero { min-height: 320px; }
   .hero__title { font-size: 1.8em; }
 }
 </style>

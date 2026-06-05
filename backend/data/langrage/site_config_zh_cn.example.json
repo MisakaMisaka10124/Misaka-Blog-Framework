@@ -3,6 +3,7 @@
   "welcomeMessage": "你好，欢迎来到我的空间！",
   "chatPlaceholder": "有什么想问 AI 的吗？",
   "about": "你的个人简介，会显示在首页左侧卡片中。",
+  "aboutContent": "<h2>Hi there</h2>\n<p>这里是你的名字，一个热爱技术的开发者。</p>\n<p>这个网站是我的个人空间，用来记录技术笔记、分享项目和一些生活感悟。</p>\n\n<h3>技术栈</h3>\n<ol>\n  <li>前端：Vue 3 / TypeScript / Vite</li>\n  <li>后端：Node.js / Express</li>\n</ol>\n\n<h3>联系我</h3>\n<p>可以通过页面底部的社交链接找到我，或者直接发邮件。</p>",
   "navLinks": [
     {"label": "首页", "path": "/"},
     {"label": "博客", "path": "/categories"},

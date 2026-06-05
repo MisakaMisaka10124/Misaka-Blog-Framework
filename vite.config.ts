@@ -15,6 +15,22 @@ export default defineConfig({
       '/images/posts': {
         target: 'http://localhost:3000',
         changeOrigin: true
+      },
+      '/images/avatars': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      '/images/friends': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      '/images/social': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      '/images/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
       }
     }
   }

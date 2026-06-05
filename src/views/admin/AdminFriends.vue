@@ -19,7 +19,7 @@
       >
         <div class="admin-friends__item-avatar">
           <img
-            :src="link.avatar || '/images/avatar1.jpg'"
+            :src="link.avatar || defaultFriendAvatar"
             :alt="link.name"
           />
         </div>
@@ -210,6 +210,7 @@ const deletingIndex = ref<number | null>(null)
 const saving = ref(false)
 const error = ref('')
 const success = ref('')
+const defaultFriendAvatar = ref('/images/avatar1.jpg')
 
 const avatarInputRef = ref<HTMLInputElement | null>(null)
 const avatarPreview = ref('')
@@ -332,9 +333,22 @@ function handleCancel() {
   avatarPreview.value = ''
 }
 
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const { data } = await axios.get('/api/server-config')
+    if (data.defaults?.friendAvatar) {
+      defaultFriendAvatar.value = data.defaults.friendAvatar
+    }
+  } catch {
+    // 使用默认值
+  }
+}
+
 // 生命周期
 onMounted(() => {
   loadFriends()
+  loadServerConfig()
 })
 </script>
 

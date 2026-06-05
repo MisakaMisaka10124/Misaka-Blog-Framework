@@ -45,5 +45,56 @@
   "marked_options": {
     "gfm": true,
     "breaks": true
+  },
+  "display": {
+    "homePostsPerPage": 5,
+    "searchResultsPerPage": 10,
+    "categoriesPostsPerPage": 5,
+    "maxSocialLinks": 4,
+    "maxHeroBackgrounds": 6,
+    "dashboardRecentPostsCount": 5,
+    "maxTagSuggestions": 8,
+    "wordCountUnit": "字"
+  },
+  "imageCompression": {
+    "maxWidth": 1920,
+    "quality": 0.82
+  },
+  "hero": {
+    "backgroundMode": "timeOfDay",
+    "staticBackground": "/images/morning.jpg",
+    "backgroundTimeRanges": {
+      "morning": [5, 11],
+      "noon": [11, 16],
+      "evening": [16, 22],
+      "night": [22, 5]
+    },
+    "backgroundRotationInterval": 300000,
+    "backgroundCheckInterval": 60000,
+    "minHeight": 420,
+    "mobileMinHeight": 320
+  },
+  "defaults": {
+    "avatar": "/images/avatar1.jpg",
+    "friendAvatar": "/images/avatar1.jpg",
+    "socialIcon": "/images/social/github.svg",
+    "siteTitle": "Misaka"
+  },
+  "fallbackImages": {
+    "heroBackgrounds": {
+      "default": [
+        "/images/morning.jpg",
+        "/images/noon.jpg",
+        "/images/evening.jpg",
+        "/images/night.jpg"
+      ],
+      "custom": []
+    },
+    "socialIcons": [
+      { "id": "github", "name": "GitHub", "url": "/images/social/github.svg" },
+      { "id": "bilibili", "name": "Bilibili", "url": "/images/social/bilibili.svg" },
+      { "id": "twitter", "name": "Twitter/X", "url": "/images/social/twitter.svg" },
+      { "id": "email", "name": "邮箱", "url": "/images/social/email.svg" }
+    ]
   }
 }
