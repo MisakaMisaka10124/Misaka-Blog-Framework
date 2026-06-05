@@ -1,4 +1,4 @@
-# Misaka Personal Web
+# Misaka Blog Framework
 
 个人博客系统，基于 Vue 3 + Express + TypeScript 构建。
 
