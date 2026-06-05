@@ -11,24 +11,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { onMounted } from 'vue'
+import { useTheme } from '../composables/useTheme'
 
-const isDark = ref(true)
-
-function toggle() {
-  isDark.value = !isDark.value
-  document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light')
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-}
+const { isDark, toggle, initTheme } = useTheme()
 
 onMounted(() => {
-  const saved = localStorage.getItem('theme')
-  if (saved) {
-    isDark.value = saved === 'dark'
-  } else {
-    isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
-  }
-  document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light')
+  initTheme()
 })
 </script>
 

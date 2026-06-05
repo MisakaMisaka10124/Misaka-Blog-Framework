@@ -360,12 +360,15 @@ async function handleSave() {
 
     await axios.put('/api/admin/config/batch', updates)
 
-    // 保存服务器配置（背景模式）
+    // 保存服务器配置（背景模式 + 头像）
     await axios.put('/api/admin/server-config', {
       hero: {
         backgroundMode: backgroundMode.value,
         staticBackground: staticBackground.value,
         backgroundRotationInterval: rotationInterval.value * 1000,
+      },
+      defaults: {
+        avatar: avatarUrl.value || defaultAvatar.value,
       }
     })
 

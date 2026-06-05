@@ -14,6 +14,7 @@
   /* 颜色 */
   --color-bg: #0a0a1a;
   --color-bg-secondary: #12122a;
+  --color-surface: rgba(18, 18, 42, 0.8);
   --color-text-primary: #e8e8e8;
   --color-text-secondary: #b0b0c8;
   --color-text-muted: #a0a0b8;
@@ -62,10 +63,11 @@
 }
 
 [data-theme="light"] {
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.08);
   --color-bg: #f0f2f5;
   --color-bg-secondary: #ffffff;
+  --color-surface: #ffffff;
   --color-text-primary: #1a1a2e;
   --color-text-secondary: #3a3a4a;
   --color-text-muted: #5a5a6a;
@@ -73,7 +75,7 @@
   /* 后台管理 - 浅色模式 */
   --admin-sidebar-bg: rgba(255, 255, 255, 0.85);
   --admin-header-bg: rgba(255, 255, 255, 0.6);
-  --admin-border: rgba(0, 0, 0, 0.06);
+  --admin-border: rgba(0, 0, 0, 0.08);
   --admin-hover-bg: rgba(0, 0, 0, 0.04);
   --admin-active-bg: rgba(0, 0, 0, 0.08);
   --admin-card-bg: rgba(0, 0, 0, 0.02);

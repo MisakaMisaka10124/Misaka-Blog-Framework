@@ -13,7 +13,6 @@
         </div>
       </div>
       <div class="admin-post-edit__header-right">
-        <span v-if="isEditing" class="admin-post-edit__slug">Slug: {{ slug }}</span>
       </div>
     </div>
 
@@ -740,15 +739,6 @@ onUnmounted(() => {
   gap: var(--space-md);
   color: var(--color-text-muted);
   font-size: 0.85em;
-}
-
-.admin-post-edit__slug {
-  font-size: 0.85em;
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  font-family: monospace;
-  color: var(--color-text-secondary);
 }
 
 /* 表单 */

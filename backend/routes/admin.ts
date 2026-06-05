@@ -40,6 +40,15 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
+    const uploadType = req.params.type || 'general';
+
+    // 头像使用固定文件名，覆盖旧文件
+    if (uploadType === 'avatar') {
+      cb(null, `avatar${ext}`);
+      return;
+    }
+
+    // 其他类型使用随机文件名
     const name = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
     cb(null, name);
   }
