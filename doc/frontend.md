@@ -68,14 +68,15 @@ const routes = [
 
 ### Upload.vue（文章管理）
 
-- **文章列表**: 显示所有文章，支持编辑/删除
+- **文章列表**: 显示所有文章（标题后附 slug），支持编辑/删除，加载中显示骨架提示
 - **编辑器**: Code/Preview 双模式切换
   - Code 模式: Markdown 语法编辑，支持粘贴图片
   - Preview 模式: 调用 `/api/md/render` 实时预览
 - **工具栏**: 加粗、斜体、行内代码、代码块、链接、图片、引用、列表
 - **标签管理**: 输入添加、点击删除、自动补全（从 `/api/tags` 加载）
-- **封面图**: 选择文件上传，编辑时可更新
+- **封面图**: 选择文件上传，编辑时可更新，更新文章时保留已有封面
 - **图片上传**: 客户端压缩后上传，URL 自动插入编辑器
+- **YAML 转义**: `yamlEscape` 函数对标题/简介中的特殊字符自动双引号包裹，避免 frontmatter 解析错误
 - **编辑时长**: 实时统计编辑时间
 
 ### PostDetail.vue（文章详情）
@@ -123,7 +124,7 @@ const routes = [
   --color-accent-hover: #60a5fa;
   --color-text-primary: #e8e8e8;
   --color-text-secondary: #b0b0c8;
-  --color-text-muted: #8888a0;
+  --color-text-muted: #a0a0b8;
   --glass-bg: rgba(255, 255, 255, 0.12);
   --glass-border: rgba(255, 255, 255, 0.18);
   /* ... */

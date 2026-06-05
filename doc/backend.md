@@ -211,6 +211,7 @@ export function verifyToken(req, res, next) {
 
 记录访问并返回站点统计。
 
+- 优先从 `cf-connecting-ip` 头获取真实客户端 IP（兼容 Cloudflare CDN），回退至 `req.ip`
 - 记录当前 IP（同一天同一 IP 只计一次）
 - 调用 ip-api.com 获取国家代码
 - 统计今日更新文章数（从索引 date 字段）
