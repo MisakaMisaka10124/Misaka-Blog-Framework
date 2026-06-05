@@ -1,0 +1,9 @@
+services:
+  personal-web:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # 持久化数据目录（配置、文章、图片等）
+      - ./data:/app/backend/data
+    restart: unless-stopped

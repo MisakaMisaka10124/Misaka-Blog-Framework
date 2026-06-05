@@ -782,7 +782,7 @@ onUnmounted(() => {
 /* 输入框样式 */
 .admin-post-edit__field input[type='text'],
 .admin-post-edit__field textarea {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: var(--space-sm) var(--space-md);
@@ -795,7 +795,7 @@ onUnmounted(() => {
 .admin-post-edit__field input:focus,
 .admin-post-edit__field textarea:focus {
   border-color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--admin-hover-bg);
 }
 
 .admin-post-edit__field input:disabled {
@@ -810,7 +810,7 @@ onUnmounted(() => {
 }
 
 .admin-post-edit__cover-btn {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: var(--space-sm) var(--space-md);
@@ -821,7 +821,7 @@ onUnmounted(() => {
 }
 
 .admin-post-edit__cover-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--admin-active-bg);
 }
 
 .admin-post-edit__cover-name {
@@ -869,7 +869,7 @@ onUnmounted(() => {
   gap: var(--space-xs);
   align-items: center;
   padding: var(--space-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   min-height: 40px;
@@ -917,7 +917,7 @@ onUnmounted(() => {
 
 .admin-post-edit__tag-input-wrap .admin-post-edit__tag-field {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--admin-hover-bg) !important;
   border: 1px solid var(--glass-border) !important;
   border-radius: var(--radius-sm) !important;
   padding: 4px 8px !important;
@@ -957,7 +957,7 @@ onUnmounted(() => {
   display: flex;
   gap: 2px;
   padding: var(--space-xs);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--admin-card-bg);
   border: 1px solid var(--glass-border);
   border-bottom: none;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
@@ -975,7 +975,7 @@ onUnmounted(() => {
 }
 
 .admin-post-edit__toolbar button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--admin-active-bg);
   color: var(--color-text-primary);
 }
 
@@ -998,7 +998,7 @@ onUnmounted(() => {
 
 /* 编辑器 */
 .admin-post-edit__editor {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-top: none;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
@@ -1018,7 +1018,7 @@ onUnmounted(() => {
 
 /* 预览区域 */
 .admin-post-edit__preview {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-top: none;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
@@ -1042,7 +1042,7 @@ onUnmounted(() => {
 }
 
 .admin-post-edit__preview :deep(code) {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--admin-active-bg);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Cascadia Code', 'Fira Code', monospace;

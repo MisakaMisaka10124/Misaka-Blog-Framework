@@ -51,6 +51,14 @@
   /* 内容宽度 */
   --content-max-width: 1200px;
   --article-max-width: 800px;
+
+  /* 后台管理 */
+  --admin-sidebar-bg: rgba(10, 10, 26, 0.85);
+  --admin-header-bg: rgba(10, 10, 26, 0.6);
+  --admin-border: rgba(255, 255, 255, 0.06);
+  --admin-hover-bg: rgba(255, 255, 255, 0.06);
+  --admin-active-bg: rgba(255, 255, 255, 0.1);
+  --admin-card-bg: rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="light"] {
@@ -61,4 +69,12 @@
   --color-text-primary: #1a1a2e;
   --color-text-secondary: #3a3a4a;
   --color-text-muted: #5a5a6a;
+
+  /* 后台管理 - 浅色模式 */
+  --admin-sidebar-bg: rgba(255, 255, 255, 0.85);
+  --admin-header-bg: rgba(255, 255, 255, 0.6);
+  --admin-border: rgba(0, 0, 0, 0.06);
+  --admin-hover-bg: rgba(0, 0, 0, 0.04);
+  --admin-active-bg: rgba(0, 0, 0, 0.08);
+  --admin-card-bg: rgba(0, 0, 0, 0.02);
 }

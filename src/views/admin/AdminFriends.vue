@@ -406,7 +406,7 @@ onMounted(() => {
 }
 
 .admin-friends__item:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--admin-card-bg);
 }
 
 .admin-friends__item-avatar {
@@ -549,7 +549,7 @@ onMounted(() => {
 }
 
 .admin-friends__dialog-field input {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: var(--space-sm) var(--space-md);
@@ -561,7 +561,7 @@ onMounted(() => {
 
 .admin-friends__dialog-field input:focus {
   border-color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--admin-hover-bg);
 }
 
 /* 头像输入 */
@@ -574,7 +574,7 @@ onMounted(() => {
 
 .admin-friends__avatar-btn {
   padding: var(--space-sm) var(--space-md);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
@@ -585,7 +585,7 @@ onMounted(() => {
 }
 
 .admin-friends__avatar-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--admin-active-bg);
 }
 
 .admin-friends__avatar-hint {
@@ -636,7 +636,7 @@ onMounted(() => {
 }
 
 .admin-friends__dialog-btn--cancel:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--admin-hover-bg);
 }
 
 .admin-friends__dialog-btn--confirm {

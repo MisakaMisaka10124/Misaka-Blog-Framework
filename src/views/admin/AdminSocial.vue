@@ -432,7 +432,7 @@ onMounted(() => {
 }
 
 .admin-social__item:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--admin-card-bg);
 }
 
 .admin-social__item-icon {
@@ -440,7 +440,7 @@ onMounted(() => {
   height: 48px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -590,7 +590,7 @@ onMounted(() => {
 }
 
 .admin-social__dialog-field input {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: var(--space-sm) var(--space-md);
@@ -602,7 +602,7 @@ onMounted(() => {
 
 .admin-social__dialog-field input:focus {
   border-color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--admin-hover-bg);
 }
 
 /* 图标选择器 */
@@ -624,7 +624,7 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-xs);
   padding: var(--space-md);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--admin-card-bg);
   border: 2px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -632,7 +632,7 @@ onMounted(() => {
 }
 
 .admin-social__icon-option:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   border-color: var(--glass-border);
 }
 
@@ -687,7 +687,7 @@ onMounted(() => {
 }
 
 .admin-social__dialog-btn--cancel:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--admin-hover-bg);
 }
 
 .admin-social__dialog-btn--confirm {

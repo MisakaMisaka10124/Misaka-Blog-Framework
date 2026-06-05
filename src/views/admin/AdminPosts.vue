@@ -269,7 +269,7 @@ async function confirmDelete() {
 }
 
 .admin-posts__item:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--admin-card-bg);
 }
 
 .admin-posts__col {
@@ -436,7 +436,7 @@ async function confirmDelete() {
 }
 
 .admin-posts__dialog-btn--cancel:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--admin-hover-bg);
 }
 
 .admin-posts__dialog-btn--confirm {

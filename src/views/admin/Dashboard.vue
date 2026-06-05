@@ -339,7 +339,7 @@ onMounted(async () => {
 }
 
 .dashboard__post-item:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--admin-card-bg);
 }
 
 .dashboard__post-info {

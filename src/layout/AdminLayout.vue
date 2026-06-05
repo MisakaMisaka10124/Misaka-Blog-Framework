@@ -94,6 +94,7 @@
           ☰
         </button>
         <div class="admin-layout__header-title">{{ currentPageTitle }}</div>
+        <ThemeToggle />
       </header>
 
       <!-- 页面内容 -->
@@ -108,6 +109,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import ThemeToggle from '../components/ThemeToggle.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -202,10 +204,10 @@ onMounted(() => {
 /* 侧边栏 - 玻璃拟态风格 */
 .admin-layout__sidebar {
   width: 240px;
-  background: rgba(10, 10, 26, 0.85);
+  background: var(--admin-sidebar-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid var(--admin-border);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -218,7 +220,7 @@ onMounted(() => {
 
 .admin-layout__logo {
   padding: var(--space-xl) var(--space-xl);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--admin-border);
 }
 
 .admin-layout__logo-link {
@@ -252,12 +254,12 @@ onMounted(() => {
 }
 
 .admin-layout__nav-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   color: var(--color-text-primary);
 }
 
 .admin-layout__nav-item--active {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--admin-active-bg);
   color: var(--color-text-primary);
 }
 
@@ -281,7 +283,7 @@ onMounted(() => {
 
 .admin-layout__footer {
   padding: var(--space-md) var(--space-sm);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--admin-border);
 }
 
 .admin-layout__logout,
@@ -303,7 +305,7 @@ onMounted(() => {
 
 .admin-layout__logout:hover,
 .admin-layout__back-site:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--admin-hover-bg);
   color: var(--color-text-primary);
 }
 
@@ -322,10 +324,10 @@ onMounted(() => {
 
 .admin-layout__header {
   height: 56px;
-  background: rgba(10, 10, 26, 0.6);
+  background: var(--admin-header-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--admin-border);
   display: flex;
   align-items: center;
   padding: 0 var(--space-xl);

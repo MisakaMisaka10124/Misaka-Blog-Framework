@@ -426,8 +426,8 @@ onMounted(() => {
 
 /* 区块 - 玻璃拟态风格 */
 .admin-settings__section {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-border);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
 }
@@ -438,7 +438,7 @@ onMounted(() => {
   color: var(--color-text-primary);
   margin-bottom: var(--space-lg);
   padding-bottom: var(--space-sm);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--admin-border);
 }
 
 /* 字段 */
@@ -463,8 +463,8 @@ onMounted(() => {
 .admin-settings__field input[type='number'],
 .admin-settings__field textarea,
 .admin-settings__field select {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-border);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   color: var(--color-text-primary);
@@ -476,8 +476,8 @@ onMounted(() => {
 .admin-settings__field input:focus,
 .admin-settings__field textarea:focus,
 .admin-settings__field select:focus {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--color-accent);
+  background: var(--admin-hover-bg);
 }
 
 .admin-settings__field select {
@@ -515,7 +515,7 @@ onMounted(() => {
   height: 72px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--admin-border);
   flex-shrink: 0;
 }
 
@@ -535,8 +535,8 @@ onMounted(() => {
 .admin-settings__upload-btn {
   align-self: flex-start;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
   font-size: 0.85em;
@@ -545,7 +545,7 @@ onMounted(() => {
 }
 
 .admin-settings__upload-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--admin-hover-bg);
 }
 
 .admin-settings__url-input {
@@ -592,8 +592,8 @@ onMounted(() => {
 .admin-settings__bg-add {
   align-self: flex-start;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: var(--admin-card-bg);
+  border: 1px dashed var(--admin-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   font-size: 0.85em;
@@ -602,7 +602,7 @@ onMounted(() => {
 }
 
 .admin-settings__bg-add:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--admin-hover-bg);
   color: var(--color-text-primary);
 }
 
@@ -626,9 +626,9 @@ onMounted(() => {
 
 .admin-settings__save-btn {
   padding: 10px 24px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--admin-hover-bg);
   color: var(--color-text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--admin-border);
   border-radius: var(--radius-md);
   font-size: 0.9em;
   cursor: pointer;
@@ -636,7 +636,7 @@ onMounted(() => {
 }
 
 .admin-settings__save-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--admin-active-bg);
 }
 
 .admin-settings__save-btn:disabled {
@@ -648,7 +648,7 @@ onMounted(() => {
   padding: 10px 20px;
   background: transparent;
   color: var(--color-text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--admin-border);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition-fast);
