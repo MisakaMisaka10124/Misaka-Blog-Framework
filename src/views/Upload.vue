@@ -21,7 +21,7 @@
           class="upload__list-item"
         >
           <div class="upload__list-info">
-            <h3 class="upload__list-title">{{ article.title || article.slug }}</h3>
+            <h3 class="upload__list-title">{{ article.title || article.slug }} <span class="upload__list-slug">{{ article.slug }}</span></h3>
             <div class="upload__list-meta">
               <span>{{ article.date }}</span>
               <span>{{ article.wordCount }} 字</span>
@@ -223,6 +223,15 @@ function parseFrontmatter(raw: string) {
     }
   }
   return { data, content }
+}
+
+/** 对 YAML 标量值进行转义，特殊字符时用双引号包裹 */
+function yamlEscape(val: string): string {
+  if (!val) return "''"
+  if (/[:{}\[\],&*?|>!%@`#'"\n\r]/.test(val)) {
+    return '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"'
+  }
+  return val
 }
 
 const editorWordCount = computed(() => {
@@ -449,7 +458,15 @@ async function handleSave() {
   saveError.value = ''; saveSuccess.value = ''; saveLoading.value = true
 
   try {
-    const frontmatter = ['---', `title: ${editTitle.value}`, `summary: ${editSummary.value || ''}`, `tags: [${editTags.value.join(', ')}]`, `date: ${new Date().toISOString().split('T')[0]}`, '---', ''].join('\n')
+    const fmLines = ['---',
+      `title: ${yamlEscape(editTitle.value)}`,
+      `summary: ${yamlEscape(editSummary.value || '')}`,
+      `tags: [${editTags.value.join(', ')}]`,
+      `date: ${new Date().toISOString().split('T')[0]}`,
+    ]
+    if (editCoverName.value) fmLines.push(`cover: ${editCoverName.value}`)
+    fmLines.push('---', '')
+    const frontmatter = fmLines.join('\n')
     const fullContent = frontmatter + editContent.value
 
     if (editSlug.value) {
@@ -578,6 +595,13 @@ onUnmounted(() => { stopEditTimer() })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.upload__list-slug {
+  font-size: 0.8em;
+  font-weight: normal;
+  color: var(--color-text-muted);
+  margin-left: var(--space-xs);
 }
 
 .upload__list-meta {

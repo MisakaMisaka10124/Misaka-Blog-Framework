@@ -39,7 +39,11 @@ const dataLimiter = createDataLimiter();
  */
 router.get('/stats', dataLimiter, async (req, res) => {
   try {
-    const ip = req.ip?.replace('::ffff:', '') || req.socket.remoteAddress || '0.0.0.0';
+    // 优先使用 Cloudflare 传递的真实客户端 IP
+    const ip = (req.headers['cf-connecting-ip'] as string)
+      || req.ip?.replace('::ffff:', '')
+      || req.socket.remoteAddress
+      || '0.0.0.0';
 
     const counts = recordVisit(ip);
     const countryCode = await getCountryCode(ip);
