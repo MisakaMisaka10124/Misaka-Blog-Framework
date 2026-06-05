@@ -14,7 +14,8 @@
       <div class="upload__list-header">
         <span>共 {{ articles.length }} 篇文章</span>
       </div>
-      <div class="upload__list" v-if="articles.length">
+      <p v-if="articlesLoading" class="upload__empty">加载中...</p>
+      <div class="upload__list" v-else-if="articles.length">
         <div
           v-for="article in articles"
           :key="article.slug"
@@ -177,6 +178,7 @@ interface ArticleMeta {
   readTime: string
 }
 const articles = ref<ArticleMeta[]>([])
+const articlesLoading = ref(true)
 
 // ========== 编辑器 ==========
 const editing = ref(false)
@@ -256,6 +258,8 @@ async function loadArticles() {
     articles.value = data.posts || []
   } catch (e) {
     console.warn('Failed to load articles:', e)
+  } finally {
+    articlesLoading.value = false
   }
 }
 
