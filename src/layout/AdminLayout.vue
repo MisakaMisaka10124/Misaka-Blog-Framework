@@ -14,7 +14,7 @@
     >
       <div class="admin-layout__logo">
         <router-link to="/admin" class="admin-layout__logo-link">
-          <span class="admin-layout__logo-text">管理后台</span>
+          <span class="admin-layout__logo-text">{{ siteTitle || '控制台' }}</span>
         </router-link>
       </div>
 
@@ -94,9 +94,6 @@
           ☰
         </button>
         <div class="admin-layout__header-title">{{ currentPageTitle }}</div>
-        <div class="admin-layout__header-user">
-          {{ adminUsername }}
-        </div>
       </header>
 
       <!-- 页面内容 -->
@@ -108,12 +105,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
 const sidebarOpen = ref(false)
+const siteTitle = ref('')
 
 const adminUsername = computed(() => {
   const token = localStorage.getItem('upload_token')
@@ -157,7 +156,7 @@ const navItems = [
 const currentPageTitle = computed(() => {
   const currentPath = route.path
   const item = navItems.find((nav) => nav.path === currentPath)
-  return item?.label || '管理后台'
+  return item?.label || '控制台'
 })
 
 function isActive(path: string): boolean {
@@ -171,6 +170,20 @@ function handleLogout() {
   localStorage.removeItem('upload_token')
   router.push('/login')
 }
+
+// 加载站点标题
+async function loadSiteTitle() {
+  try {
+    const { data } = await axios.get('/api/config')
+    siteTitle.value = data.siteTitle || '控制台'
+  } catch {
+    // 使用默认值
+  }
+}
+
+onMounted(() => {
+  loadSiteTitle()
+})
 </script>
 
 <style scoped>
@@ -178,13 +191,21 @@ function handleLogout() {
   display: flex;
   min-height: 100vh;
   background: var(--color-bg);
+  cursor: auto !important;
 }
 
-/* 侧边栏 */
+.admin-layout,
+.admin-layout * {
+  cursor: auto !important;
+}
+
+/* 侧边栏 - 玻璃拟态风格 */
 .admin-layout__sidebar {
   width: 240px;
-  background: var(--color-surface);
-  border-right: 1px solid var(--glass-border);
+  background: rgba(10, 10, 26, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -196,27 +217,25 @@ function handleLogout() {
 }
 
 .admin-layout__logo {
-  padding: var(--space-lg) var(--space-xl);
-  border-bottom: 1px solid var(--glass-border);
+  padding: var(--space-xl) var(--space-xl);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .admin-layout__logo-link {
   text-decoration: none;
   color: var(--color-text-primary);
   font-weight: 600;
-  font-size: 1.2em;
+  font-size: 1.1em;
 }
 
 .admin-layout__logo-text {
-  background: linear-gradient(135deg, var(--color-accent), #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary);
+  letter-spacing: -0.3px;
 }
 
 .admin-layout__nav {
   flex: 1;
-  padding: var(--space-md) 0;
+  padding: var(--space-md) var(--space-sm);
   overflow-y: auto;
 }
 
@@ -224,37 +243,45 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
   color: var(--color-text-secondary);
   text-decoration: none;
   transition: all 0.2s ease;
-  border-left: 3px solid transparent;
+  border-radius: var(--radius-md);
+  margin-bottom: 2px;
 }
 
 .admin-layout__nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--color-text-primary);
 }
 
 .admin-layout__nav-item--active {
-  background: rgba(99, 102, 241, 0.1);
-  color: var(--color-accent);
-  border-left-color: var(--color-accent);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
 }
 
 .admin-layout__nav-icon {
-  font-size: 1.2em;
-  width: 24px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+}
+
+.admin-layout__nav-item--active .admin-layout__nav-icon {
+  opacity: 1;
 }
 
 .admin-layout__nav-label {
-  font-size: 0.95em;
+  font-size: 0.9em;
+  font-weight: 500;
 }
 
 .admin-layout__footer {
-  padding: var(--space-md) 0;
-  border-top: 1px solid var(--glass-border);
+  padding: var(--space-md) var(--space-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .admin-layout__logout,
@@ -262,20 +289,21 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-md) var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
   color: var(--color-text-secondary);
   text-decoration: none;
   background: none;
   border: none;
   width: 100%;
   cursor: pointer;
-  font-size: 0.95em;
+  font-size: 0.9em;
   transition: all 0.2s ease;
+  border-radius: var(--radius-md);
 }
 
 .admin-layout__logout:hover,
 .admin-layout__back-site:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--color-text-primary);
 }
 
@@ -293,9 +321,11 @@ function handleLogout() {
 }
 
 .admin-layout__header {
-  height: 60px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--glass-border);
+  height: 56px;
+  background: rgba(10, 10, 26, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   padding: 0 var(--space-xl);
@@ -310,21 +340,26 @@ function handleLogout() {
   background: none;
   border: none;
   color: var(--color-text-primary);
-  font-size: 1.5em;
+  font-size: 1.3em;
   cursor: pointer;
   padding: var(--space-sm);
+  opacity: 0.7;
+}
+
+.admin-layout__menu-btn:hover {
+  opacity: 1;
 }
 
 .admin-layout__header-title {
   flex: 1;
-  font-size: 1.1em;
-  font-weight: 600;
+  font-size: 1em;
+  font-weight: 500;
   color: var(--color-text-primary);
 }
 
 .admin-layout__header-user {
   color: var(--color-text-secondary);
-  font-size: 0.9em;
+  font-size: 0.85em;
 }
 
 .admin-layout__content {
@@ -362,7 +397,8 @@ function handleLogout() {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
     z-index: 99;
   }
 }

@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { marked } from 'marked'
 import GlassCard from '../components/GlassCard.vue'
 
 const content = ref('')
@@ -31,7 +32,8 @@ const visitor = ref<{ ip: string; countryCode: string; todayVisitors: number; to
 onMounted(async () => {
   try {
     const { data } = await axios.get('/api/config')
-    content.value = data.aboutContent || data.about || ''
+    const rawContent = data.aboutContent || data.about || ''
+    content.value = marked(rawContent) as string
   } catch {
     // 静默失败，使用默认内容
     content.value = '<h2>Hi there</h2><p>欢迎来到我的个人空间。</p>'

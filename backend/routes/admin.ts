@@ -175,7 +175,7 @@ router.put('/config', (req, res) => {
 
     // 允许更新的字段列表
     const allowedFields = [
-      'siteTitle', 'welcomeMessage', 'chatPlaceholder', 'about',
+      'siteTitle', 'welcomeMessage', 'chatPlaceholder', 'about', 'aboutContent',
       'navLinks', 'socialLinks', 'footer', 'hero', 'friendLinks'
     ];
 
@@ -222,7 +222,7 @@ router.put('/config/batch', (req, res) => {
     const updates = req.body;
 
     const allowedFields = [
-      'siteTitle', 'welcomeMessage', 'chatPlaceholder', 'about',
+      'siteTitle', 'welcomeMessage', 'chatPlaceholder', 'about', 'aboutContent',
       'navLinks', 'socialLinks', 'footer', 'hero', 'friendLinks'
     ];
 
@@ -534,6 +534,54 @@ router.get('/social/icons', (req, res) => {
   ];
 
   res.json({ icons });
+});
+
+/**
+ * @openapi
+ * /api/admin/server-config:
+ *   put:
+ *     tags: [Admin]
+ *     summary: 更新服务器配置
+ *     description: 更新服务器配置文件中的指定字段（如背景模式等）
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: 要更新的配置
+ *     responses:
+ *       200:
+ *         description: 更新成功
+ *       401:
+ *         description: 未授权
+ */
+router.put('/server-config', (req, res) => {
+  try {
+    const updates = req.body;
+    const config = getConfig();
+
+    // 深度合并配置
+    function deepMerge(target: any, source: any) {
+      for (const key of Object.keys(source)) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+          if (!target[key]) target[key] = {};
+          deepMerge(target[key], source[key]);
+        } else {
+          target[key] = source[key];
+        }
+      }
+    }
+
+    deepMerge(config, updates);
+
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    res.json({ message: '服务器配置更新成功', updates });
+  } catch (e) {
+    res.status(500).json({ error: '服务器配置更新失败' });
+  }
 });
 
 export default router;

@@ -82,6 +82,19 @@
             placeholder="你的个人简介，会显示在首页左侧卡片中。"
           ></textarea>
         </div>
+
+        <div class="admin-settings__field">
+          <label>关于页面内容（Markdown格式）</label>
+          <textarea
+            v-model="aboutContent"
+            rows="12"
+            placeholder="输入关于页面的Markdown内容...&#10;&#10;## 标题&#10;正文内容..."
+            class="admin-settings__textarea-lg"
+          ></textarea>
+          <span class="admin-settings__field-hint">
+            支持Markdown语法，将渲染为HTML显示在关于页面
+          </span>
+        </div>
       </div>
 
       <!-- Hero 区域 -->
@@ -98,7 +111,42 @@
         </div>
 
         <div class="admin-settings__field">
-          <label>背景图片</label>
+          <label>背景切换模式</label>
+          <select v-model="backgroundMode" class="admin-settings__select">
+            <option value="static">静态模式 - 固定显示一张背景</option>
+            <option value="timeOfDay">时间段模式 - 根据时间自动切换</option>
+            <option value="rotation">轮换模式 - 定时自动切换</option>
+          </select>
+        </div>
+
+        <div v-if="backgroundMode === 'static'" class="admin-settings__field">
+          <label>静态背景</label>
+          <input
+            v-model="staticBackground"
+            type="text"
+            placeholder="/images/morning.jpg 或 https://example.com/bg.jpg"
+          />
+          <span class="admin-settings__field-hint">
+            选择一张图片作为固定背景
+          </span>
+        </div>
+
+        <div v-if="backgroundMode === 'rotation'" class="admin-settings__field">
+          <label>轮换间隔（秒）</label>
+          <input
+            v-model.number="rotationInterval"
+            type="number"
+            min="10"
+            max="3600"
+            placeholder="300"
+          />
+          <span class="admin-settings__field-hint">
+            每隔多少秒切换到下一张背景（10-3600秒）
+          </span>
+        </div>
+
+        <div class="admin-settings__field">
+          <label>背景图片列表</label>
           <div class="admin-settings__backgrounds">
             <div
               v-for="(bg, index) in heroBackgrounds"
@@ -190,6 +238,7 @@ const siteTitle = ref('')
 const welcomeMessage = ref('')
 const chatPlaceholder = ref('')
 const about = ref('')
+const aboutContent = ref('')
 const heroSubtitle = ref('')
 const heroBackgrounds = ref<string[]>([])
 const footerCopyright = ref('')
@@ -199,6 +248,11 @@ const avatarPreview = ref('')
 const avatarFile = ref<File | null>(null)
 const maxHeroBackgrounds = ref(6)
 const defaultAvatar = ref('/images/avatar1.jpg')
+
+// 背景模式相关
+const backgroundMode = ref<'static' | 'timeOfDay' | 'rotation'>('timeOfDay')
+const staticBackground = ref('')
+const rotationInterval = ref(300)
 
 // UI 状态
 const loading = ref(true)
@@ -214,20 +268,33 @@ async function loadSettings() {
   error.value = ''
 
   try {
-    const { data } = await axios.get('/api/admin/config')
+    const [configRes, serverConfigRes] = await Promise.all([
+      axios.get('/api/admin/config'),
+      axios.get('/api/server-config').catch(() => ({ data: {} }))
+    ])
+
+    const data = configRes.data
+    const serverConfig = serverConfigRes.data
 
     siteTitle.value = data.siteTitle || ''
     welcomeMessage.value = data.welcomeMessage || ''
     chatPlaceholder.value = data.chatPlaceholder || ''
     about.value = data.about || ''
+    aboutContent.value = data.aboutContent || ''
     heroSubtitle.value = data.hero?.subtitle || ''
     heroBackgrounds.value = data.hero?.backgroundImages || []
     footerCopyright.value = data.footer?.copyright || ''
     footerIcp.value = data.footer?.icp || ''
 
-    // 查找头像（从 socialLinks 或其他地方）
-    // 这里假设头像存储在某个特定位置，或者使用默认头像
-    avatarPreview.value = defaultAvatar.value
+    // 加载背景模式配置
+    if (serverConfig.hero) {
+      backgroundMode.value = serverConfig.hero.backgroundMode || 'timeOfDay'
+      staticBackground.value = serverConfig.hero.staticBackground || ''
+      rotationInterval.value = (serverConfig.hero.backgroundRotationInterval || 300000) / 1000
+    }
+
+    // 查找头像
+    avatarPreview.value = serverConfig.defaults?.avatar || defaultAvatar.value
   } catch (e: any) {
     error.value = '加载设置失败: ' + (e.response?.data?.error || e.message)
   } finally {
@@ -274,12 +341,13 @@ async function handleSave() {
       avatarUrl.value = data.url
     }
 
-    // 批量更新配置
+    // 批量更新语言配置
     const updates: Record<string, any> = {
       siteTitle: siteTitle.value,
       welcomeMessage: welcomeMessage.value,
       chatPlaceholder: chatPlaceholder.value,
       about: about.value,
+      aboutContent: aboutContent.value,
       hero: {
         subtitle: heroSubtitle.value,
         backgroundImages: heroBackgrounds.value.filter(Boolean),
@@ -291,6 +359,16 @@ async function handleSave() {
     }
 
     await axios.put('/api/admin/config/batch', updates)
+
+    // 保存服务器配置（背景模式）
+    await axios.put('/api/admin/server-config', {
+      hero: {
+        backgroundMode: backgroundMode.value,
+        staticBackground: staticBackground.value,
+        backgroundRotationInterval: rotationInterval.value * 1000,
+      }
+    })
+
     success.value = '设置保存成功'
   } catch (e: any) {
     error.value = '保存失败: ' + (e.response?.data?.error || e.message)
@@ -327,7 +405,8 @@ onMounted(() => {
 }
 
 .admin-settings__title {
-  font-size: 1.4em;
+  font-size: 1.3em;
+  font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: var(--space-xl);
 }
@@ -342,25 +421,24 @@ onMounted(() => {
 .admin-settings__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2xl);
+  gap: var(--space-xl);
 }
 
-/* 区块 */
+/* 区块 - 玻璃拟态风格 */
 .admin-settings__section {
-  background: var(--color-surface);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
 }
 
 .admin-settings__section-title {
-  font-size: 1.1em;
+  font-size: 1em;
   font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: var(--space-lg);
   padding-bottom: var(--space-sm);
-  border-bottom: 2px solid var(--color-accent);
-  display: inline-block;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* 字段 */
@@ -376,32 +454,53 @@ onMounted(() => {
 }
 
 .admin-settings__field label {
-  font-size: 0.9em;
+  font-size: 0.85em;
   color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .admin-settings__field input[type='text'],
-.admin-settings__field textarea {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--glass-border);
+.admin-settings__field input[type='number'],
+.admin-settings__field textarea,
+.admin-settings__field select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
-  padding: var(--space-sm) var(--space-md);
+  padding: 10px 14px;
   color: var(--color-text-primary);
-  font-size: 0.95em;
+  font-size: 0.9em;
   outline: none;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .admin-settings__field input:focus,
-.admin-settings__field textarea:focus {
-  border-color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.08);
+.admin-settings__field textarea:focus,
+.admin-settings__field select:focus {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-settings__field select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
 }
 
 .admin-settings__field-hint {
   font-size: 0.8em;
   color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.admin-settings__textarea-lg {
+  min-height: 240px;
+  resize: vertical;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 0.85em;
+  line-height: 1.6;
 }
 
 /* 头像 */
@@ -412,11 +511,11 @@ onMounted(() => {
 }
 
 .admin-settings__avatar-preview {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid var(--glass-border);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 
@@ -435,18 +534,18 @@ onMounted(() => {
 
 .admin-settings__upload-btn {
   align-self: flex-start;
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--glass-border);
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
-  font-size: 0.9em;
+  font-size: 0.85em;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .admin-settings__upload-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .admin-settings__url-input {
@@ -477,12 +576,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: var(--radius-sm);
   color: #ef4444;
-  font-size: 1.2em;
+  font-size: 1.1em;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
@@ -492,29 +591,30 @@ onMounted(() => {
 
 .admin-settings__bg-add {
   align-self: flex-start;
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px dashed var(--color-accent);
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-sm);
-  color: var(--color-accent);
-  font-size: 0.9em;
+  color: var(--color-text-secondary);
+  font-size: 0.85em;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .admin-settings__bg-add:hover {
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
 }
 
 /* 状态消息 */
 .admin-settings__error {
   color: #ef4444;
-  font-size: 0.9em;
+  font-size: 0.85em;
 }
 
 .admin-settings__success {
   color: #22c55e;
-  font-size: 0.9em;
+  font-size: 0.85em;
 }
 
 /* 操作按钮 */
@@ -525,30 +625,30 @@ onMounted(() => {
 }
 
 .admin-settings__save-btn {
-  padding: var(--space-sm) var(--space-xl);
-  background: var(--color-accent);
-  color: #fff;
-  border: none;
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
-  font-size: 1em;
+  font-size: 0.9em;
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .admin-settings__save-btn:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .admin-settings__save-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .admin-settings__reset-btn {
-  padding: var(--space-sm) var(--space-lg);
+  padding: 10px 20px;
   background: transparent;
   color: var(--color-text-muted);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: var(--transition-fast);

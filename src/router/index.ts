@@ -15,41 +15,47 @@ function isTokenValid(): boolean {
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    // 前台页面
+    // 前台页面（使用AppLayout）
     {
       path: '/',
-      name: 'home',
-      component: () => import('../views/Home.vue'),
-    },
-    {
-      path: '/categories',
-      name: 'categories',
-      component: () => import('../views/Categories.vue'),
-    },
-    {
-      path: '/categories/:tag',
-      name: 'category-detail',
-      component: () => import('../views/CategoryDetail.vue'),
-    },
-    {
-      path: '/post/:slug',
-      name: 'post',
-      component: () => import('../views/PostDetail.vue'),
-    },
-    {
-      path: '/about',
-      name: 'about',
-      component: () => import('../views/About.vue'),
-    },
-    {
-      path: '/friends',
-      name: 'friends',
-      component: () => import('../views/Friends.vue'),
-    },
-    {
-      path: '/search',
-      name: 'search',
-      component: () => import('../views/Search.vue'),
+      component: () => import('../layout/AppLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'home',
+          component: () => import('../views/Home.vue'),
+        },
+        {
+          path: 'categories',
+          name: 'categories',
+          component: () => import('../views/Categories.vue'),
+        },
+        {
+          path: 'categories/:tag',
+          name: 'category-detail',
+          component: () => import('../views/CategoryDetail.vue'),
+        },
+        {
+          path: 'post/:slug',
+          name: 'post',
+          component: () => import('../views/PostDetail.vue'),
+        },
+        {
+          path: 'about',
+          name: 'about',
+          component: () => import('../views/About.vue'),
+        },
+        {
+          path: 'friends',
+          name: 'friends',
+          component: () => import('../views/Friends.vue'),
+        },
+        {
+          path: 'search',
+          name: 'search',
+          component: () => import('../views/Search.vue'),
+        },
+      ],
     },
     // 登录页面
     {
@@ -58,7 +64,7 @@ const router = createRouter({
       component: () => import('../views/Login.vue'),
       meta: { guestOnly: true },
     },
-    // 后台管理页面（需要认证）
+    // 后台管理页面（需要认证，使用AdminLayout）
     {
       path: '/admin',
       component: () => import('../layout/AdminLayout.vue'),
