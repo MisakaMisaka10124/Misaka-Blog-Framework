@@ -23,10 +23,10 @@
   "hero": {
     "subtitle": "你的个性签名",
     "backgroundImages": [
-      "/images/morning.jpg",
-      "/images/noon.jpg",
-      "/images/evening.jpg",
-      "/images/night.jpg"
+      "/images/backgrounds/morning.jpg",
+      "/images/backgrounds/noon.jpg",
+      "/images/backgrounds/evening.jpg",
+      "/images/backgrounds/night.jpg"
     ]
   },
   "friendLinks": [

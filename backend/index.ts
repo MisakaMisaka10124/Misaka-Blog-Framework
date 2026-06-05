@@ -140,16 +140,14 @@ app.get('/api/friendlinks', (req, res) => {
 // 静态文件：文章图片
 app.use('/images/posts', express.static(path.join(__dirname, './data/posts/images')));
 
-// 静态文件：管理后台上传的图片（用户上传的优先，fallback到dist中的默认图片）
+// 静态文件：所有可修改图片统一存放在 data/images/
+app.use('/images/backgrounds', express.static(path.join(__dirname, './data/images/backgrounds')));
 app.use('/images/avatars', express.static(path.join(__dirname, './data/images/avatars')));
-app.use('/images/avatars', express.static(path.join(__dirname, '../dist/images')));
 app.use('/images/friends', express.static(path.join(__dirname, './data/images/friends')));
-app.use('/images/friends', express.static(path.join(__dirname, '../dist/images/friends')));
 app.use('/images/social', express.static(path.join(__dirname, './data/images/social')));
-app.use('/images/social', express.static(path.join(__dirname, '../dist/images/social')));
 app.use('/images/uploads', express.static(path.join(__dirname, './data/images/uploads')));
 
-// 静态文件：其他默认图片（背景图、头像等）
+// 静态文件：兜底（favicon、cursor 等框架级静态资源）
 app.use('/images', express.static(path.join(__dirname, '../dist/images')));
 
 // API 路由

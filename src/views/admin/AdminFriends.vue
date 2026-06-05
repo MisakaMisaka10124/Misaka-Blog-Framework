@@ -210,7 +210,7 @@ const deletingIndex = ref<number | null>(null)
 const saving = ref(false)
 const error = ref('')
 const success = ref('')
-const defaultFriendAvatar = ref('/images/avatar1.jpg')
+const defaultFriendAvatar = ref('/images/avatars/avatar1.jpg')
 
 const avatarInputRef = ref<HTMLInputElement | null>(null)
 const avatarPreview = ref('')

@@ -62,7 +62,7 @@
   },
   "hero": {
     "backgroundMode": "timeOfDay",
-    "staticBackground": "/images/morning.jpg",
+    "staticBackground": "/images/backgrounds/morning.jpg",
     "backgroundTimeRanges": {
       "morning": [5, 11],
       "noon": [11, 16],
@@ -75,18 +75,18 @@
     "mobileMinHeight": 320
   },
   "defaults": {
-    "avatar": "/images/avatar1.jpg",
-    "friendAvatar": "/images/avatar1.jpg",
+    "avatar": "/images/avatars/avatar1.jpg",
+    "friendAvatar": "/images/avatars/avatar1.jpg",
     "socialIcon": "/images/social/github.svg",
     "siteTitle": "Misaka"
   },
   "fallbackImages": {
     "heroBackgrounds": {
       "default": [
-        "/images/morning.jpg",
-        "/images/noon.jpg",
-        "/images/evening.jpg",
-        "/images/night.jpg"
+        "/images/backgrounds/morning.jpg",
+        "/images/backgrounds/noon.jpg",
+        "/images/backgrounds/evening.jpg",
+        "/images/backgrounds/night.jpg"
       ],
       "custom": []
     },

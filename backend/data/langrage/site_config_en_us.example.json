@@ -23,10 +23,10 @@
   "hero": {
     "subtitle": "Your personal tagline",
     "backgroundImages": [
-      "/images/morning.jpg",
-      "/images/noon.jpg",
-      "/images/evening.jpg",
-      "/images/night.jpg"
+      "/images/backgrounds/morning.jpg",
+      "/images/backgrounds/noon.jpg",
+      "/images/backgrounds/evening.jpg",
+      "/images/backgrounds/night.jpg"
     ]
   },
   "friendLinks": [

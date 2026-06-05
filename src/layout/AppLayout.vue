@@ -89,10 +89,10 @@ const siteConfig = ref<SiteConfig>({
 })
 
 const backgrounds = ref<string[]>([
-  '/images/morning.jpg',
-  '/images/noon.jpg',
-  '/images/evening.jpg',
-  '/images/night.jpg',
+  '/images/backgrounds/morning.jpg',
+  '/images/backgrounds/noon.jpg',
+  '/images/backgrounds/evening.jpg',
+  '/images/backgrounds/night.jpg',
 ])
 
 const activeBgIndex = ref(0)

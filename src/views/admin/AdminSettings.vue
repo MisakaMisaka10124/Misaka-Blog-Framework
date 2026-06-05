@@ -124,7 +124,7 @@
           <input
             v-model="staticBackground"
             type="text"
-            placeholder="/images/morning.jpg 或 https://example.com/bg.jpg"
+            placeholder="/images/backgrounds/morning.jpg 或 https://example.com/bg.jpg"
           />
           <span class="admin-settings__field-hint">
             选择一张图片作为固定背景
@@ -247,7 +247,7 @@ const avatarUrl = ref('')
 const avatarPreview = ref('')
 const avatarFile = ref<File | null>(null)
 const maxHeroBackgrounds = ref(6)
-const defaultAvatar = ref('/images/avatar1.jpg')
+const defaultAvatar = ref('/images/avatars/avatar1.jpg')
 
 // 背景模式相关
 const backgroundMode = ref<'static' | 'timeOfDay' | 'rotation'>('timeOfDay')

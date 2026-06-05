@@ -82,7 +82,7 @@ const config = ref<SiteConfig>({
 const posts = ref<PostMeta[]>([])
 const currentPage = ref(1)
 const pageSize = ref(5)
-const defaultAvatar = ref('/images/avatar1.jpg')
+const defaultAvatar = ref('/images/avatars/avatar1.jpg')
 
 function socialUrl(link: { platform: string; url: string }): string {
   if (link.platform === 'email') {
