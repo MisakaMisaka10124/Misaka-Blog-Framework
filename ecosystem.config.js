@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
     name: 'personal_web',
-    script: 'tsx',
-    args: 'backend/index.ts',
+    script: 'npx',
+    args: 'tsx backend/index.ts',
     cwd: '/var/www/Misaka-Blog-Framework',
     env: {
       NODE_ENV: 'production'

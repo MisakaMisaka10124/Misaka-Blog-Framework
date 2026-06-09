@@ -519,8 +519,8 @@ setup_pm2() {
 module.exports = {
   apps: [{
     name: '${PM2_APP_NAME}',
-    script: 'tsx',
-    args: 'backend/index.ts',
+    script: 'npx',
+    args: 'tsx backend/index.ts',
     cwd: '${install_path}',
     env: {
       NODE_ENV: 'production'
