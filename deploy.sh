@@ -265,6 +265,13 @@ download_release() {
 
     local base_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${version}"
 
+    # 下载校验文件
+    log_info "下载校验文件 (checksums-sha256.txt)..."
+    curl -L -o "${download_dir}/checksums-sha256.txt" "${base_url}/checksums-sha256.txt"
+    if [ $? -ne 0 ]; then
+        log_error "下载校验文件失败"
+    fi
+
     # 下载 dist.tar.gz
     log_info "下载前端文件 (dist.tar.gz)..."
     curl -L -o "${download_dir}/dist.tar.gz" "${base_url}/dist.tar.gz"
@@ -277,6 +284,15 @@ download_release() {
     curl -L -o "${download_dir}/backend.tar.gz" "${base_url}/backend.tar.gz"
     if [ $? -ne 0 ]; then
         log_error "下载 backend.tar.gz 失败"
+    fi
+
+    # SHA256 校验
+    log_info "校验文件完整性..."
+    cd "$download_dir"
+    if sha256sum -c checksums-sha256.txt 2>/dev/null; then
+        log_success "SHA256 校验通过"
+    else
+        log_error "SHA256 校验失败！文件可能被篡改或下载不完整"
     fi
 
     log_success "下载完成"

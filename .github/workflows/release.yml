@@ -62,10 +62,16 @@ jobs:
             docker-compose.yml \
             Dockerfile
 
+      - name: Generate checksums
+        run: |
+          sha256sum dist.tar.gz backend.tar.gz > checksums-sha256.txt
+          cat checksums-sha256.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist.tar.gz
             backend.tar.gz
+            checksums-sha256.txt
           generate_release_notes: true
