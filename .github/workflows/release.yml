@@ -1,0 +1,70 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Prepare dist package
+        run: |
+          # 创建 dist 压缩包（只包含构建产物）
+          tar -czf dist.tar.gz dist/
+
+      - name: Prepare backend package
+        run: |
+          # 复制 example 文件为正式配置文件（去掉 .example 后缀）
+          cp backend/data/config/core_server_config.example.json backend/data/config/core_server_config.json
+          cp backend/data/langrage/site_config_zh_cn.example.json backend/data/langrage/site_config_zh_cn.json
+          cp backend/data/langrage/site_config_zh_hk.example.json backend/data/langrage/site_config_zh_hk.json
+          cp backend/data/langrage/site_config_en_us.example.json backend/data/langrage/site_config_en_us.json
+
+          # 创建 backend 压缩包
+          # 排除 example 源文件和用户可能修改的数据
+          tar -czf backend.tar.gz \
+            --exclude='backend/data/config/*.example.json' \
+            --exclude='backend/data/config/visitor_stats.json' \
+            --exclude='backend/data/langrage/*.example.json' \
+            --exclude='backend/data/posts/**/*.md' \
+            --exclude='backend/data/posts/post_index.json' \
+            --exclude='backend/data/posts/tags/*.json' \
+            --exclude='backend/data/posts/images' \
+            --exclude='backend/data/posts/*/images' \
+            --exclude='backend/data/images/uploads' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            backend/ \
+            package.json \
+            package-lock.json \
+            ecosystem.config.js \
+            docker-compose.yml \
+            Dockerfile
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist.tar.gz
+            backend.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

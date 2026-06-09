@@ -7,6 +7,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import apiRouter from './routes/index';
 import { buildIndex } from './services/post_index';
 import { syncAllTags } from './services/tag';
+import { initSiteStats } from './services/site_stats';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -182,6 +183,14 @@ app.listen(port, async () => {
     console.log(`Post index built: ${index.posts.length} posts found`);
   } catch (e) {
     console.log('Post index build skipped (no posts directory or empty)');
+  }
+
+  // 初始化站点统计
+  try {
+    const stats = initSiteStats();
+    console.log(`Site stats initialized: ${stats.totalPosts} posts, ${stats.totalTags} tags`);
+  } catch (e) {
+    console.log('Site stats initialization skipped');
   }
 
   try {

@@ -56,10 +56,11 @@ backend/data/
 
 ## 文档
 
-- [后端文档](./doc/backend.md)
-- [前端文档](./doc/frontend.md)
-- [验收文档](./doc/acceptance.md)
-- [更新日志](./doc/update/)
+- [部署指南](./doc/deploy.md) - 环境要求、安装部署、版本更新
+- [后端文档](./doc/backend.md) - API 接口、服务架构
+- [前端文档](./doc/frontend.md) - 组件结构、路由配置
+- [使用指南](./doc/guide.md) - 功能介绍、使用说明
+- [更新日志](./doc/update/index.md) - 版本更新记录
 
 ## 许可证
 

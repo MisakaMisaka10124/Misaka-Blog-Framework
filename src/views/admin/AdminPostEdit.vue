@@ -351,6 +351,17 @@ function parseFrontmatter(raw: string) {
           .split(',')
           .map((s: string) => s.trim().replace(/^["']|["']$/g, ''))
           .filter(Boolean)
+      } else if (typeof val === 'string') {
+        // 剥离YAML引号包裹，反转义内部字符
+        const quotedMatch = val.match(/^"(.*)"$/s)
+        if (quotedMatch) {
+          val = quotedMatch[1]
+            .replace(/\\"/g, '"')
+            .replace(/\\n/g, '\n')
+            .replace(/\\\\/g, '\\')
+        } else if (/^'(.*)'$/s.test(val)) {
+          val = val.slice(1, -1)
+        }
       }
       data[m[1]] = val
     }
@@ -605,7 +616,7 @@ async function loadPost() {
     content.value = parsed.content
 
     if (data.meta?.cover) {
-      coverName.value = data.meta.cover.split('/').pop() || ''
+      coverName.value = data.meta.cover  // 保存完整路径，确保再次保存时frontmatter中cover路径正确
       coverPreview.value = data.meta.cover
     }
   } catch (e: any) {
@@ -646,7 +657,11 @@ async function handleSave() {
       `tags: [${quotedTags.join(', ')}]`,
       `date: ${new Date().toISOString().split('T')[0]}`,
     ]
-    if (coverName.value) {
+    if (coverFile.value && coverName.value) {
+      // 新上传封面：只写文件名（后端 writeFrontmatterField 会覆盖为完整URL）
+      fmLines.push(`cover: ${coverName.value.split('/').pop()}`)
+    } else if (coverName.value) {
+      // 保留已有封面：写入完整路径
       fmLines.push(`cover: ${coverName.value}`)
     }
     fmLines.push('---', '')
@@ -1155,5 +1170,17 @@ onUnmounted(() => {
   .admin-post-edit__header {
     flex-direction: column;
   }
+}
+</style>
+
+<style>
+/* 浅色模式代码块适配 */
+[data-theme="light"] .admin-post-edit__preview :deep(code) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .admin-post-edit__preview :deep(pre) {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 </style>

@@ -159,3 +159,29 @@
   background: rgba(234, 179, 8, 0.1);
   border-color: #eab308;
 }
+
+/* ===== 浅色模式适配 ===== */
+[data-theme="light"] .markdown-body code {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .markdown-body pre {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .markdown-body h2 {
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .markdown-body th {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .markdown-body tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .markdown-body img {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}

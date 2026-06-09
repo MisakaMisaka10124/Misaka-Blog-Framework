@@ -1,5 +1,5 @@
 # 多阶段构建
-# 阶段1：构建前端
+# 构建前端
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
@@ -7,7 +7,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# 阶段2：运行
+# 运行
 FROM node:20-alpine
 WORKDIR /app
 

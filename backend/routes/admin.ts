@@ -31,6 +31,9 @@ const storage = multer.diskStorage({
       case 'social':
         dir = path.join(__dirname, '../data/images/social');
         break;
+      case 'background':
+        dir = path.join(__dirname, '../data/images/backgrounds');
+        break;
       default:
         dir = path.join(__dirname, '../data/images/uploads');
     }
@@ -323,6 +326,9 @@ router.post('/upload/:type', upload.single('image'), (req: any, res) => {
         break;
       case 'social':
         url = `/images/social/${filename}`;
+        break;
+      case 'background':
+        url = `/images/backgrounds/${filename}`;
         break;
       default:
         url = `/images/uploads/${filename}`;

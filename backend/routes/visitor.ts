@@ -1,14 +1,23 @@
 import { Router } from 'express';
 import { recordVisit, getCountryCode } from '../services/visitor';
+import { readSiteStats, updateVisitorStats } from '../services/site_stats';
 import { readIndex } from '../services/post_index';
 import { createDataLimiter } from '../utils/rate_limit';
 
 const router = Router();
 const dataLimiter = createDataLimiter();
 
+/** 获取客户端 IP */
+function getClientIp(req: any): string {
+  return (req.headers['cf-connecting-ip'] as string)
+    || req.ip?.replace('::ffff:', '')
+    || req.socket.remoteAddress
+    || '0.0.0.0';
+}
+
 /**
  * @openapi
- * /api/visitor/stats:
+ * /api/visitor/record:
  *   get:
  *     tags: [Visitor]
  *     summary: 记录访问并获取站点统计
@@ -16,37 +25,15 @@ const dataLimiter = createDataLimiter();
  *     responses:
  *       200:
  *         description: 站点统计数据
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ip:
- *                   type: string
- *                   description: 当前访问者 IP
- *                 countryCode:
- *                   type: string
- *                   description: 国家代码（用于 flag-icons 显示国旗）
- *                 todayVisitors:
- *                   type: number
- *                   description: 今日访客数
- *                 totalVisitors:
- *                   type: number
- *                   description: 总访客数
- *                 todayPosts:
- *                   type: number
- *                   description: 今日更新文章数
  */
-router.get('/stats', dataLimiter, async (req, res) => {
+router.get('/record', dataLimiter, async (req, res) => {
   try {
-    // 优先使用 Cloudflare 传递的真实客户端 IP
-    const ip = (req.headers['cf-connecting-ip'] as string)
-      || req.ip?.replace('::ffff:', '')
-      || req.socket.remoteAddress
-      || '0.0.0.0';
-
+    const ip = getClientIp(req);
     const counts = recordVisit(ip);
     const countryCode = await getCountryCode(ip);
+
+    // 同步更新 site_stats.json
+    updateVisitorStats(counts.todayCount, counts.totalCount);
 
     // 统计今日更新的文章数
     const today = new Date().toISOString().split('T')[0];
@@ -60,6 +47,49 @@ router.get('/stats', dataLimiter, async (req, res) => {
       totalVisitors: counts.totalCount,
       todayPosts,
     });
+  } catch (e) {
+    res.status(500).json({ error: '统计获取失败' });
+  }
+});
+
+/**
+ * @openapi
+ * /api/visitor/stats:
+ *   get:
+ *     tags: [Visitor]
+ *     summary: 获取站点统计（只读）
+ *     description: 从预计算的统计文件读取访客数据，不记录访问
+ *     responses:
+ *       200:
+ *         description: 访客统计数据
+ */
+router.get('/stats', dataLimiter, (req, res) => {
+  try {
+    const stats = readSiteStats();
+    res.json({
+      todayVisitors: stats.todayVisitors,
+      totalVisitors: stats.totalVisitors,
+    });
+  } catch (e) {
+    res.status(500).json({ error: '统计获取失败' });
+  }
+});
+
+/**
+ * @openapi
+ * /api/visitor/site-stats:
+ *   get:
+ *     tags: [Visitor]
+ *     summary: 获取完整站点统计（Dashboard专用）
+ *     description: 返回预计算的完整站点统计，包括文章数、标签数、访客数、最近文章
+ *     responses:
+ *       200:
+ *         description: 完整站点统计数据
+ */
+router.get('/site-stats', dataLimiter, (req, res) => {
+  try {
+    const stats = readSiteStats();
+    res.json(stats);
   } catch (e) {
     res.status(500).json({ error: '统计获取失败' });
   }

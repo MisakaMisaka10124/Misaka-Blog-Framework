@@ -995,3 +995,15 @@ onUnmounted(() => { stopEditTimer() })
   .upload__back-btn { margin-left: 0; }
 }
 </style>
+
+<style>
+/* 浅色模式代码块适配 */
+[data-theme="light"] .upload__preview :deep(code) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .upload__preview :deep(pre) {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+</style>

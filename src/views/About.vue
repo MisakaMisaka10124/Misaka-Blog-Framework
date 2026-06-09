@@ -14,7 +14,7 @@
         <span class="about__visitor-sep">|</span>
         <span>今日有{{ visitor.todayVisitors }}人访问</span>
         <span class="about__visitor-sep">|</span>
-        <span>您的IP为：<span :class="`fi fi-${visitor.countryCode.toLowerCase()}`"></span> {{ visitor.ip }}</span>
+        <span>您的IP为：<span :class="`fi fi-${visitor.countryCode.toLowerCase()}`"></span> <code class="about__ip">{{ visitor.ip }}</code></span>
       </div>
     </GlassCard>
   </div>
@@ -40,7 +40,7 @@ onMounted(async () => {
   }
 
   try {
-    const { data } = await axios.get('/api/visitor/stats')
+    const { data } = await axios.get('/api/visitor/record')
     visitor.value = data
   } catch {
     // 静默失败，不影响页面
@@ -76,6 +76,8 @@ onMounted(async () => {
   color: var(--color-text-secondary);
   font-size: 0.9em;
   line-height: 1.8;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .about__visitor-sep {
@@ -85,6 +87,15 @@ onMounted(async () => {
 .about__visitor .fi {
   margin-right: 4px;
   vertical-align: middle;
+}
+
+.about__ip {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  word-break: break-all;
 }
 
 @media (max-width: 600px) {

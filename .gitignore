@@ -26,6 +26,10 @@ personal-web-set_副本/
 .claude/
 CLAUDE.md
 
+# Logs
+logs/
+*.log
+
 # OS
 .DS_Store
 *.local

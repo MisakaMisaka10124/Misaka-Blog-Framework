@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { buildIndex, readIndex, addOrUpdatePost, removePost, getMonthDir, getMonthDirFromSlug } from '../services/post_index';
 import { syncTagsForPost } from '../services/tag';
+import { updatePostStats, updateTagStats } from '../services/site_stats';
 import { generateSlug } from '../utils/slug';
 import { verifyToken } from '../middleware/auth';
 import { createDataLimiter } from '../utils/rate_limit';
@@ -183,6 +184,10 @@ router.post('/upload', verifyToken, upload.fields([
   const allTags = [...new Set([...metaTags, ...formTags])];
   syncTagsForPost(slug, allTags, []);
 
+  // 更新站点统计
+  updatePostStats();
+  updateTagStats();
+
   res.json({
     message: '文件上传成功',
     slug,
@@ -318,6 +323,8 @@ router.get('/index', dataLimiter, (req, res) => {
 router.post('/reindex', verifyToken, (req, res) => {
   try {
     const index = buildIndex();
+    updatePostStats();
+    updateTagStats();
     res.json({ message: '索引重建成功', count: index.posts.length, index });
   } catch (e) {
     res.status(500).json({ error: '索引重建失败' });
@@ -409,6 +416,10 @@ router.delete('/:slug', verifyToken, (req, res) => {
     return res.status(404).json({ error: '文章不存在' });
   }
 
+  // 更新站点统计
+  updatePostStats();
+  updateTagStats();
+
   res.json({ message: '文章删除成功', slug });
 });
 
@@ -499,6 +510,10 @@ router.put('/:slug', verifyToken, (req: any, res, next) => {
     const oldTagsStr = oldTags.map(t => String(t));
     syncTagsForPost(slug, newTags, oldTagsStr);
   }
+
+  // 更新站点统计
+  updatePostStats();
+  updateTagStats();
 
   res.json({ message: '更新成功', slug, meta });
 });

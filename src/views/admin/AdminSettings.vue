@@ -121,11 +121,41 @@
 
         <div v-if="backgroundMode === 'static'" class="admin-settings__field">
           <label>静态背景</label>
-          <input
-            v-model="staticBackground"
-            type="text"
-            placeholder="/images/backgrounds/morning.jpg 或 https://example.com/bg.jpg"
-          />
+          <div class="admin-settings__bg-item">
+            <div class="admin-settings__bg-preview">
+              <img
+                v-if="staticBackground"
+                :src="staticBackground"
+                alt="静态背景预览"
+                @error="($event.target as HTMLImageElement).style.display='none'"
+                @load="($event.target as HTMLImageElement).style.display='block'"
+              />
+              <div v-if="!staticBackground" class="admin-settings__bg-placeholder">无图片</div>
+            </div>
+            <div class="admin-settings__bg-controls">
+              <input
+                v-model="staticBackground"
+                type="text"
+                placeholder="/images/backgrounds/morning.jpg 或 https://example.com/bg.jpg"
+              />
+              <div class="admin-settings__bg-actions">
+                <input
+                  ref="staticBgInputRef"
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  @change="handleStaticBgSelect"
+                />
+                <button
+                  type="button"
+                  class="admin-settings__upload-btn"
+                  @click="staticBgInputRef?.click()"
+                >
+                  本地上传
+                </button>
+              </div>
+            </div>
+          </div>
           <span class="admin-settings__field-hint">
             选择一张图片作为固定背景
           </span>
@@ -153,18 +183,46 @@
               :key="index"
               class="admin-settings__bg-item"
             >
-              <input
-                v-model="heroBackgrounds[index]"
-                type="text"
-                :placeholder="`背景图片 ${index + 1} URL`"
-              />
-              <button
-                type="button"
-                class="admin-settings__bg-remove"
-                @click="removeBackground(index)"
-              >
-                ×
-              </button>
+              <div class="admin-settings__bg-preview">
+                <img
+                  v-if="bg"
+                  :src="bg"
+                  :alt="`背景 ${index + 1}`"
+                  @error="($event.target as HTMLImageElement).style.display='none'"
+                  @load="($event.target as HTMLImageElement).style.display='block'"
+                />
+                <div v-if="!bg" class="admin-settings__bg-placeholder">无图片</div>
+              </div>
+              <div class="admin-settings__bg-controls">
+                <input
+                  v-model="heroBackgrounds[index]"
+                  type="text"
+                  :placeholder="`背景图片 ${index + 1} URL`"
+                />
+                <div class="admin-settings__bg-actions">
+                  <input
+                    :ref="(el) => bgInputRefs[index] = el as HTMLInputElement"
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    @change="handleBgSelect($event, index)"
+                  />
+                  <button
+                    type="button"
+                    class="admin-settings__upload-btn"
+                    @click="bgInputRefs[index]?.click()"
+                  >
+                    本地上传
+                  </button>
+                  <button
+                    type="button"
+                    class="admin-settings__bg-remove"
+                    @click="removeBackground(index)"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
             </div>
             <button
               v-if="heroBackgrounds.length < maxHeroBackgrounds"
@@ -176,7 +234,7 @@
             </button>
           </div>
           <span class="admin-settings__field-hint">
-            建议使用 1920x1080 以上的图片，支持 jpg/png/webp 格式
+            建议使用 1920x1080 以上的图片，支持 jpg/png/webp 格式，可输入网络URL或本地上传
           </span>
         </div>
       </div>
@@ -261,6 +319,8 @@ const error = ref('')
 const success = ref('')
 
 const avatarInputRef = ref<HTMLInputElement | null>(null)
+const bgInputRefs = ref<(HTMLInputElement | null)[]>([])
+const staticBgInputRef = ref<HTMLInputElement | null>(null)
 
 // 加载设置
 async function loadSettings() {
@@ -322,6 +382,39 @@ function addBackground() {
 
 function removeBackground(index: number) {
   heroBackgrounds.value.splice(index, 1)
+  bgInputRefs.value.splice(index, 1)
+}
+
+async function handleBgSelect(e: Event, index: number) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await axios.post('/api/admin/upload/background', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    heroBackgrounds.value[index] = data.url
+  } catch (err: any) {
+    error.value = '背景图片上传失败: ' + (err.response?.data?.error || err.message)
+  }
+}
+
+async function handleStaticBgSelect(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await axios.post('/api/admin/upload/background', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    staticBackground.value = data.url
+  } catch (err: any) {
+    error.value = '背景图片上传失败: ' + (err.response?.data?.error || err.message)
+  }
 }
 
 // 保存设置
@@ -559,17 +652,54 @@ onMounted(() => {
 .admin-settings__backgrounds {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .admin-settings__bg-item {
   display: flex;
-  gap: var(--space-sm);
-  align-items: center;
+  gap: var(--space-md);
+  align-items: flex-start;
 }
 
-.admin-settings__bg-item input {
+.admin-settings__bg-preview {
+  width: 120px;
+  height: 68px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  flex-shrink: 0;
+  background: var(--admin-card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-settings__bg-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-settings__bg-placeholder {
+  font-size: 0.75em;
+  color: var(--color-text-muted);
+}
+
+.admin-settings__bg-controls {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.admin-settings__bg-controls input[type='text'] {
+  width: 100%;
+}
+
+.admin-settings__bg-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
 }
 
 .admin-settings__bg-remove {
@@ -667,6 +797,15 @@ onMounted(() => {
   .admin-settings__avatar-row {
     flex-direction: column;
     align-items: center;
+  }
+
+  .admin-settings__bg-item {
+    flex-direction: column;
+  }
+
+  .admin-settings__bg-preview {
+    width: 100%;
+    height: 120px;
   }
 }
 </style>

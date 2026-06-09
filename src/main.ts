@@ -2,8 +2,8 @@ import { createApp } from 'vue'
 import axios from 'axios'
 import App from './App.vue'
 import router from './router'
+import { useTheme } from './composables/useTheme'
 import './assets/styles/base.css'
-import 'highlight.js/styles/github-dark.css'
 
 // 请求拦截器：自动添加 token
 axios.interceptors.request.use((config) => {
@@ -25,6 +25,9 @@ axios.interceptors.response.use(
     return Promise.reject(err)
   }
 )
+
+// 全局初始化主题（确保所有页面都能正确加载 highlight.js 主题）
+useTheme().initTheme()
 
 const app = createApp(App)
 app.use(router)

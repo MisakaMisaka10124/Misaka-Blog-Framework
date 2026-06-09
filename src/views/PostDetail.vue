@@ -13,7 +13,7 @@
     <div class="post-detail__layout">
       <!-- 主栏：文章正文 -->
       <article class="post-detail__article">
-        <GlassCard class="post-detail__content" hoverable="false">
+        <GlassCard class="post-detail__content" :hoverable="false">
           <div class="markdown-body" v-html="renderedHtml"></div>
         </GlassCard>
 

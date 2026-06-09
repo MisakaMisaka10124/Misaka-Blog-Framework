@@ -160,7 +160,7 @@ interface PostMeta {
   tags: string[]
   date: string
   wordCount: number
-  readTime: number
+  readTime: string
 }
 
 const stats = ref({
@@ -173,44 +173,16 @@ const stats = ref({
 const recentPosts = ref<PostMeta[]>([])
 
 onMounted(async () => {
-  let dashboardRecentPostsCount = 5
-
   try {
-    // 获取服务器配置
-    const { data: serverConfig } = await axios.get('/api/server-config')
-    if (serverConfig.display?.dashboardRecentPostsCount) {
-      dashboardRecentPostsCount = serverConfig.display.dashboardRecentPostsCount
-    }
+    // 一次性加载预计算的站点统计
+    const { data } = await axios.get('/api/visitor/site-stats')
+    stats.value.totalPosts = data.totalPosts || 0
+    stats.value.totalTags = data.totalTags || 0
+    stats.value.totalVisitors = data.totalVisitors || 0
+    stats.value.todayVisitors = data.todayVisitors || 0
+    recentPosts.value = data.recentPosts || []
   } catch (e) {
-    console.warn('Failed to load server config:', e)
-  }
-
-  try {
-    // 获取文章索引
-    const { data: indexData } = await axios.get('/api/posts/index')
-    stats.value.totalPosts = indexData.posts?.length || 0
-    recentPosts.value = (indexData.posts || [])
-      .sort((a: PostMeta, b: PostMeta) => b.date.localeCompare(a.date))
-      .slice(0, dashboardRecentPostsCount)
-  } catch (e) {
-    console.warn('Failed to load posts:', e)
-  }
-
-  try {
-    // 获取标签
-    const { data: tagsData } = await axios.get('/api/tags')
-    stats.value.totalTags = tagsData.tags?.length || 0
-  } catch (e) {
-    console.warn('Failed to load tags:', e)
-  }
-
-  try {
-    // 获取访客统计
-    const { data: visitorData } = await axios.get('/api/visitor/stats')
-    stats.value.totalVisitors = visitorData.total || 0
-    stats.value.todayVisitors = visitorData.today || 0
-  } catch (e) {
-    console.warn('Failed to load visitor stats:', e)
+    console.warn('Failed to load site stats:', e)
   }
 })
 </script>
