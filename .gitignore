@@ -30,6 +30,9 @@ CLAUDE.md
 logs/
 *.log
 
+# Release guide (internal use)
+doc/release-guide.md
+
 # OS
 .DS_Store
 *.local

@@ -342,32 +342,107 @@ sudo ./deploy.sh --mode docker
 
 ## 配置说明
 
-### 服务器配置
+### 配置文件位置
 
-首次安装后，需要配置服务器参数：
+部署完成后，所有配置文件位于：
 
-```bash
-# 复制示例配置
-cp backend/data/config/core_server_config.example.json backend/data/config/core_server_config.json
-
-# 编辑配置
-nano backend/data/config/core_server_config.json
+```
+/var/www/Misaka-Blog-Framework/backend/data/
+├── config/
+│   └── core_server_config.json    ← 服务器配置（重要！）
+└── langrage/
+    ├── site_config_zh_cn.json     ← 中文简体
+    ├── site_config_zh_hk.json     ← 中文繁体
+    └── site_config_en_us.json     ← English
 ```
 
-主要配置项：
-- `server.port` - 服务端口（默认 3000）
-- `admin.username` - 管理员用户名
-- `admin.password` - 管理员密码
-- `jwt.secret` - JWT 密钥（请修改为随机字符串）
+### ⚠️ 首次部署必须修改的配置
 
-### 多语言配置
+#### 1. 服务器配置（必改）
 
 ```bash
-# 复制语言配置模板
-cp backend/data/langrage/site_config_zh_cn.example.json backend/data/langrage/site_config_zh_cn.json
-cp backend/data/langrage/site_config_zh_hk.example.json backend/data/langrage/site_config_zh_hk.json
-cp backend/data/langrage/site_config_en_us.example.json backend/data/langrage/site_config_en_us.json
+nano /var/www/Misaka-Blog-Framework/backend/data/config/core_server_config.json
 ```
+
+**必须修改的字段：**
+
+```json
+{
+  "admin": {
+    "username": "admin",           // ← 修改管理员用户名
+    "password": "YOUR_PASSWORD"    // ← 修改管理员密码（必须改！）
+  },
+  "jwt": {
+    "secret": "YOUR_JWT_SECRET"   // ← 修改 JWT 密钥（必须改！建议随机字符串）
+  }
+}
+```
+
+**可选修改的字段：**
+
+```json
+{
+  "server": {
+    "port": 3000                   // ← 服务端口（一般不用改）
+  },
+  "ai": {
+    "base_url": "https://api.xxx.com/v1",  // ← AI API 地址
+    "api_key": "sk-xxx",                    // ← AI API Key
+    "model": "gpt-4"                        // ← AI 模型
+  }
+}
+```
+
+#### 2. 站点信息配置（建议修改）
+
+```bash
+# 根据你的语言选择一个编辑
+nano /var/www/Misaka-Blog-Framework/backend/data/langrage/site_config_zh_cn.json
+```
+
+**主要字段：**
+
+```json
+{
+  "siteTitle": "我的博客",                    // ← 站点标题
+  "welcomeMessage": "欢迎来到我的博客！",      // ← 欢迎语
+  "about": "关于我的简介",                    // ← 个人简介（首页显示）
+  "socialLinks": [                           // ← 社交链接
+    {"platform": "github", "url": "https://github.com/xxx"},
+    {"platform": "email", "url": "your@email.com"}
+  ],
+  "footer": {
+    "copyright": "2026 Your Name"            // ← 版权信息
+  }
+}
+```
+
+### 配置修改后
+
+```bash
+# 重启服务使配置生效
+pm2 restart personal_web    # Nginx + pm2 模式
+# 或
+docker compose restart      # Docker 模式
+```
+
+### 全部配置项参考
+
+#### core_server_config.json 完整说明
+
+| 字段 | 类型 | 说明 | 默认值 |
+|------|------|------|--------|
+| `server.port` | number | 服务端口 | 3000 |
+| `admin.username` | string | 管理员用户名 | admin |
+| `admin.password` | string | 管理员密码 | （必须修改） |
+| `jwt.secret` | string | JWT 签名密钥 | （必须修改） |
+| `jwt.expires_in` | string | JWT 过期时间 | 24h |
+| `ai.base_url` | string | AI API 地址 | - |
+| `ai.api_key` | string | AI API Key | - |
+| `ai.model` | string | AI 模型名称 | - |
+| `display.homePostsPerPage` | number | 首页每页文章数 | 5 |
+| `imageCompression.maxWidth` | number | 图片压缩最大宽度 | 1920 |
+| `imageCompression.quality` | number | 图片压缩质量 | 0.82 |
 
 ## 常用命令
 
