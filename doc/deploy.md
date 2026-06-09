@@ -97,6 +97,29 @@ brew install --cask docker
 
 ## 快速开始
 
+### 下载部署脚本
+
+```bash
+# 下载部署脚本
+curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
+chmod +x deploy.sh
+```
+
+### 运行部署
+
+```bash
+# 交互式选择模式（推荐新手使用）
+sudo ./deploy.sh
+
+# 或直接指定模式
+sudo ./deploy.sh --mode nginx    # Nginx + pm2 模式
+sudo ./deploy.sh --mode docker   # Docker 模式
+```
+
+> 不指定 `--mode` 参数时，脚本会交互式询问选择 nginx 还是 docker 模式。
+
+---
+
 ## 方式一：Nginx + pm2 模式（推荐）
 
 ### 首次安装
@@ -106,7 +129,7 @@ brew install --cask docker
 node -v    # 需要 v18+
 npm -v     # 需要 9+
 
-# 2. 下载部署脚本
+# 2. 下载部署脚本（如果还没有）
 curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
 chmod +x deploy.sh
 
@@ -149,12 +172,17 @@ node -v              # 需要 v18+（构建时需要）
 docker --version     # 需要 Docker
 docker compose version  # 需要 Docker Compose V2
 
-# 2. 下载部署脚本
+# 2. 下载部署脚本（如果还没有）
 curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
 chmod +x deploy.sh
 
 # 3. 运行安装
 sudo ./deploy.sh --mode docker
+
+# 或使用交互式选择
+sudo ./deploy.sh
+# 然后选择 2) docker
+```
 
 # 脚本会自动：
 # ✓ 检查依赖（缺少会提示安装方法）

@@ -361,9 +361,24 @@ router.get('/:slug', dataLimiter, (req, res) => {
     return res.status(404).json({ error: '文章不存在' });
   }
 
-  const monthDir = getMonthDir(meta.date);
-  const postsDir = path.join(__dirname, '../data/posts', monthDir);
-  const filePath = path.join(postsDir, `${slug}.md`);
+  let monthDir = getMonthDir(meta.date);
+  const basePostsDir = path.join(__dirname, '../data/posts');
+  let filePath = path.join(basePostsDir, monthDir, `${slug}.md`);
+
+  // 按日期目录找不到时，扫描所有月份目录（兼容日期变更导致的路径不一致）
+  if (!fs.existsSync(filePath)) {
+    const entries = fs.readdirSync(basePostsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && /^\d{4}-\d{2}$/.test(entry.name)) {
+        const candidate = path.join(basePostsDir, entry.name, `${slug}.md`);
+        if (fs.existsSync(candidate)) {
+          filePath = candidate;
+          monthDir = entry.name;
+          break;
+        }
+      }
+    }
+  }
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: '文章不存在' });
@@ -406,8 +421,22 @@ router.delete('/:slug', verifyToken, (req, res) => {
   const meta = index.posts.find(p => p.slug === slug);
   if (meta) {
     syncTagsForPost(slug, [], meta.tags);
-    // 删除图片目录
-    const monthDir = getMonthDir(meta.date);
+    // 删除图片目录（按日期目录找不到时扫描所有月份目录）
+    let monthDir = getMonthDir(meta.date);
+    const basePostsDir = path.join(__dirname, '../data/posts');
+    const imgDir = path.join(basePostsDir, monthDir, 'images', slug);
+    if (!fs.existsSync(imgDir)) {
+      const entries = fs.readdirSync(basePostsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && /^\d{4}-\d{2}$/.test(entry.name)) {
+          const candidate = path.join(basePostsDir, entry.name, 'images', slug);
+          if (fs.existsSync(candidate)) {
+            monthDir = entry.name;
+            break;
+          }
+        }
+      }
+    }
     removeImageDir(slug, monthDir);
   }
 
@@ -481,9 +510,24 @@ router.put('/:slug', verifyToken, (req: any, res, next) => {
     return res.status(404).json({ error: '文章不存在' });
   }
 
-  const monthDir = getMonthDir(oldPost.date);
-  const postsDir = path.join(__dirname, '../data/posts', monthDir);
-  const filePath = path.join(postsDir, `${slug}.md`);
+  let monthDir = getMonthDir(oldPost.date);
+  const basePostsDir = path.join(__dirname, '../data/posts');
+  let filePath = path.join(basePostsDir, monthDir, `${slug}.md`);
+
+  // 按日期目录找不到时，扫描所有月份目录（兼容日期变更导致的路径不一致）
+  if (!fs.existsSync(filePath)) {
+    const entries = fs.readdirSync(basePostsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && /^\d{4}-\d{2}$/.test(entry.name)) {
+        const candidate = path.join(basePostsDir, entry.name, `${slug}.md`);
+        if (fs.existsSync(candidate)) {
+          filePath = candidate;
+          monthDir = entry.name;
+          break;
+        }
+      }
+    }
+  }
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: '文章不存在' });

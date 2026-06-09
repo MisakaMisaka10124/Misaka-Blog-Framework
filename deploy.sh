@@ -3,7 +3,7 @@
 # =============================================================================
 # Misaka Blog Framework 部署/更新脚本
 # 用法: ./deploy.sh [选项]
-#   --mode <nginx|docker>    部署模式（默认: nginx）
+#   --mode <nginx|docker>    部署模式（不指定时交互式询问）
 #   --version <版本号>       指定版本（默认: 最新版本）
 #   --path <安装路径>        安装路径（默认: /var/www/Misaka-Blog-Framework）
 #   --help                   显示帮助信息
@@ -56,13 +56,22 @@ Misaka Blog Framework 部署/更新脚本
 用法: ./deploy.sh [选项]
 
 选项:
-  --mode <nginx|docker>    部署模式（默认: nginx）
+  --mode <nginx|docker>    部署模式（不指定时自动检测或交互式询问）
   --version <版本号>       指定版本，如 v1.0.0（默认: 最新版本）
   --path <安装路径>        安装路径（默认: /var/www/Misaka-Blog-Framework）
   --help                   显示此帮助信息
 
+行为说明:
+  - 首次安装: 如果未指定模式，会交互式询问选择 nginx 或 docker
+  - 更新模式: 自动检测当前部署方式，无需重新选择
+  - 更新模式: 跳过 Nginx 配置询问（已配置则保留）
+  - 更新模式: 显示文件差异分析，确认后才执行更新
+
 示例:
-  # 首次安装最新版本（Nginx + pm2 模式）
+  # 交互式选择模式（首次安装会询问）
+  ./deploy.sh
+
+  # 直接指定 Nginx + pm2 模式
   ./deploy.sh --mode nginx
 
   # 更新到指定版本
@@ -214,6 +223,82 @@ Docker Compose V2 已包含在 Docker 中，请确保安装了最新版本的 Do
     log_success "所有依赖检查通过"
 }
 
+# 自动检测当前部署方式
+detect_current_mode() {
+    local install_path=$1
+
+    # 检查是否存在 pm2 进程
+    if command -v pm2 &> /dev/null && pm2 list 2>/dev/null | grep -q "$PM2_APP_NAME"; then
+        echo "nginx"
+        return 0
+    fi
+
+    # 检查是否存在 docker compose 服务
+    if command -v docker &> /dev/null && [ -f "${install_path}/docker-compose.yml" ]; then
+        cd "$install_path"
+        if docker compose ps 2>/dev/null | grep -q "Up"; then
+            echo "docker"
+            return 0
+        fi
+    fi
+
+    # 检查是否有 nginx 配置文件
+    if [ -f "/etc/nginx/sites-enabled/misaka-blog" ] || [ -f "/etc/nginx/sites-available/misaka-blog" ]; then
+        echo "nginx"
+        return 0
+    fi
+
+    # 无法检测到
+    echo ""
+    return 1
+}
+
+# 比较文件差异
+compare_files() {
+    local old_dir=$1
+    local new_dir=$2
+    local diff_output=""
+    local changes_count=0
+
+    log_info "比较文件差异..."
+
+    # 比较前端文件
+    if [ -d "${old_dir}/dist" ] && [ -d "${new_dir}/dist" ]; then
+        local frontend_diff=$(diff -rq "${old_dir}/dist" "${new_dir}/dist" 2>/dev/null | head -20)
+        if [ -n "$frontend_diff" ]; then
+            diff_output+="  前端文件变更:\n$frontend_diff\n"
+            changes_count=$((changes_count + $(echo "$frontend_diff" | wc -l)))
+        fi
+    fi
+
+    # 比较后端文件（排除用户数据目录）
+    if [ -d "${old_dir}/backend" ] && [ -d "${new_dir}/backend" ]; then
+        local backend_diff=$(diff -rq --exclude="data" "${old_dir}/backend" "${new_dir}/backend" 2>/dev/null | head -20)
+        if [ -n "$backend_diff" ]; then
+            diff_output+="  后端文件变更:\n$backend_diff\n"
+            changes_count=$((changes_count + $(echo "$backend_diff" | wc -l)))
+        fi
+    fi
+
+    # 比较 package.json
+    if [ -f "${old_dir}/package.json" ] && [ -f "${new_dir}/package.json" ]; then
+        local pkg_diff=$(diff "${old_dir}/package.json" "${new_dir}/package.json" 2>/dev/null)
+        if [ -n "$pkg_diff" ]; then
+            diff_output+="  依赖变更:\n$pkg_diff\n"
+            changes_count=$((changes_count + 1))
+        fi
+    fi
+
+    if [ -n "$diff_output" ]; then
+        echo -e "$diff_output"
+        log_info "发现 $changes_count 处变更"
+        return 0
+    else
+        log_info "无文件变更"
+        return 1
+    fi
+}
+
 # =============================================================================
 # GitHub API 函数
 # =============================================================================
@@ -332,9 +417,9 @@ fresh_install() {
 
     # 根据模式配置服务
     if [ "$mode" = "nginx" ]; then
-        setup_pm2 "$install_path"
+        setup_pm2 "$install_path" "false"
     elif [ "$mode" = "docker" ]; then
-        setup_docker "$install_path"
+        setup_docker "$install_path" "false"
     fi
 
     # 保存版本号
@@ -419,12 +504,57 @@ update_version() {
 
     log_success "用户数据备份完成"
 
-    # 解压新版本（包含默认配置和初始化数据）
-    log_info "更新前端文件..."
-    tar -xzf "${download_dir}/dist.tar.gz" -C "$install_path"
+    # 智能更新：只更新有变化的文件
+    log_info "智能更新文件..."
 
+    # 创建临时目录用于比较
+    local temp_extract_dir="${download_dir}/temp_extract"
+    mkdir -p "$temp_extract_dir"
+
+    # 解压新版本到临时目录
+    tar -xzf "${download_dir}/dist.tar.gz" -C "$temp_extract_dir"
+    tar -xzf "${download_dir}/backend.tar.gz" -C "$temp_extract_dir"
+
+    # 更新前端文件
+    log_info "更新前端文件..."
+    if [ -d "$temp_extract_dir/dist" ]; then
+        # 使用 rsync 进行智能同步（如果可用）
+        if command -v rsync &> /dev/null; then
+            rsync -a --delete "$temp_extract_dir/dist/" "${install_path}/dist/"
+        else
+            # 回退到 cp
+            rm -rf "${install_path}/dist"
+            cp -r "$temp_extract_dir/dist" "${install_path}/"
+        fi
+    fi
+
+    # 更新后端文件（排除 data 目录）
     log_info "更新后端文件..."
-    tar -xzf "${download_dir}/backend.tar.gz" -C "$install_path"
+    if [ -d "$temp_extract_dir/backend" ]; then
+        # 更新后端代码文件
+        find "$temp_extract_dir/backend" -type f ! -path "*/data/*" | while read file; do
+            local relpath="${file#$temp_extract_dir/backend/}"
+            local dest="${install_path}/backend/$relpath"
+            mkdir -p "$(dirname "$dest")"
+            cp "$file" "$dest"
+        done
+
+        # 更新后端配置文件（如果不存在）
+        if [ ! -f "${install_path}/backend/data/config/core_server_config.json" ] && [ -f "$temp_extract_dir/backend/data/config/core_server_config.json.default" ]; then
+            cp "$temp_extract_dir/backend/data/config/core_server_config.json.default" "${install_path}/backend/data/config/core_server_config.json"
+        fi
+    fi
+
+    # 更新根目录文件
+    log_info "更新配置文件..."
+    for file in package.json tsconfig.json README.md; do
+        if [ -f "$temp_extract_dir/$file" ]; then
+            cp "$temp_extract_dir/$file" "${install_path}/"
+        fi
+    done
+
+    # 清理临时解压目录
+    rm -rf "$temp_extract_dir"
 
     # 恢复用户数据（覆盖新版本中的默认配置）
     log_info "恢复用户数据..."
@@ -557,13 +687,18 @@ EOF
     log_success "pm2 服务已启动"
 
     # 只有首次部署才询问是否配置 Nginx
-    if [ "$is_update" = false ]; then
-        ask_nginx_config "$install_path"
-    fi
+    ask_nginx_config "$install_path" "$is_update"
 }
 
 ask_nginx_config() {
     local install_path=$1
+    local is_update=${2:-false}
+
+    # 更新模式下跳过 Nginx 配置询问
+    if [ "$is_update" = true ]; then
+        log_info "更新模式：跳过 Nginx 配置询问"
+        return 0
+    fi
 
     echo ""
     log_info "=========================================="
@@ -822,9 +957,7 @@ EOF
     log_success "Docker 服务已启动"
 
     # 只有首次部署才询问是否配置 Nginx
-    if [ "$is_update" = false ]; then
-        ask_nginx_config "$install_path"
-    fi
+    ask_nginx_config "$install_path" "$is_update"
 }
 
 stop_services() {
@@ -875,7 +1008,7 @@ start_services() {
 
 main() {
     # 解析命令行参数
-    local mode="$DEFAULT_MODE"
+    local mode=""
     local version=""
     local install_path="$DEFAULT_INSTALL_PATH"
 
@@ -902,36 +1035,131 @@ main() {
         esac
     done
 
+    # 检查是否已安装
+    local current_version=$(get_current_version "$install_path")
+    local is_update=false
+
+    echo "============================================"
+    echo "  Misaka Blog Framework 部署脚本"
+    echo "============================================"
+    echo ""
+
+    # 判断是更新还是全新安装
+    if [ "$current_version" != "none" ]; then
+        is_update=true
+        log_info "检测到已安装版本: $current_version"
+
+        # 自动检测现有部署方式
+        local detected_mode=$(detect_current_mode "$install_path")
+        if [ -n "$detected_mode" ]; then
+            log_success "自动检测到当前部署方式: $detected_mode"
+            if [ -z "$mode" ]; then
+                mode="$detected_mode"
+                log_info "使用自动检测的部署方式: $mode"
+            elif [ "$mode" != "$detected_mode" ]; then
+                log_warn "指定的部署方式 ($mode) 与当前部署方式 ($detected_mode) 不一致"
+                read -p "是否继续使用 $mode 模式？(y/N) " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    mode="$detected_mode"
+                    log_info "已切换到 $mode 模式"
+                fi
+            fi
+        else
+            log_warn "无法自动检测当前部署方式"
+            if [ -z "$mode" ]; then
+                echo ""
+                echo "请选择部署模式:"
+                echo "  1) nginx - 使用 Nginx + pm2 部署（推荐）"
+                echo "  2) docker - 使用 Docker Compose 部署"
+                echo ""
+                read -p "请输入选项 [1/2]: " choice
+                case "$choice" in
+                    1)
+                        mode="nginx"
+                        ;;
+                    2)
+                        mode="docker"
+                        ;;
+                    *)
+                        log_error "无效的选项: $choice，请输入 1 或 2"
+                        ;;
+                esac
+            fi
+        fi
+    else
+        log_info "检测到全新安装"
+    fi
+
+    # 如果未指定模式且无法自动检测，交互式询问用户
+    if [ -z "$mode" ]; then
+        echo ""
+        echo "请选择部署模式:"
+        echo "  1) nginx - 使用 Nginx + pm2 部署（推荐）"
+        echo "  2) docker - 使用 Docker Compose 部署"
+        echo ""
+        read -p "请输入选项 [1/2]: " choice
+        case "$choice" in
+            1)
+                mode="nginx"
+                ;;
+            2)
+                mode="docker"
+                ;;
+            *)
+                log_error "无效的选项: $choice，请输入 1 或 2"
+                ;;
+        esac
+    fi
+
+    # 如果未指定模式且无法自动检测，交互式询问用户
+    if [ -z "$mode" ]; then
+        echo ""
+        echo "请选择部署模式:"
+        echo "  1) nginx - 使用 Nginx + pm2 部署（推荐）"
+        echo "  2) docker - 使用 Docker Compose 部署"
+        echo ""
+        read -p "请输入选项 [1/2]: " choice
+        case "$choice" in
+            1)
+                mode="nginx"
+                ;;
+            2)
+                mode="docker"
+                ;;
+            *)
+                log_error "无效的选项: $choice，请输入 1 或 2"
+                ;;
+        esac
+    fi
+
     # 验证模式
     if [ "$mode" != "nginx" ] && [ "$mode" != "docker" ]; then
         log_error "无效的部署模式: $mode，支持 nginx 或 docker"
     fi
 
-    echo "============================================"
-    echo "  Misaka Blog Framework 部署脚本"
-    echo "============================================"
+    log_success "部署模式验证通过: $mode"
+
     echo ""
     log_info "部署模式: $mode"
     log_info "安装路径: $install_path"
     echo ""
 
     # 检查依赖
+    log_info "检查系统依赖..."
     check_dependencies "$mode"
+    echo ""
 
     # 获取版本信息
     if [ -z "$version" ]; then
         version=$(get_latest_version)
-        log_info "最新版本: $version"
+        log_info "获取最新版本: $version"
     else
         log_info "指定版本: $version"
     fi
 
-    # 检查是否已安装
-    local current_version=$(get_current_version "$install_path")
-    local is_update=false
-
-    if [ "$current_version" != "none" ]; then
-        is_update=true
+    # 检查是否需要更新
+    if [ "$is_update" = true ]; then
         log_info "当前版本: $current_version"
 
         # 检查是否需要更新
@@ -948,33 +1176,91 @@ main() {
                 log_info "已取消操作"
                 exit 0
             fi
+        else
+            log_success "升级版本: $current_version -> $version"
         fi
-    else
-        log_info "检测到全新安装"
     fi
+
+    # 显示操作总览
+    echo ""
+    echo "============================================"
+    echo "  操作总览"
+    echo "============================================"
+    if [ "$is_update" = true ]; then
+        echo "  操作类型: 版本更新"
+        echo "  当前版本: $current_version"
+        echo "  目标版本: $version"
+    else
+        echo "  操作类型: 全新安装"
+        echo "  安装版本: $version"
+    fi
+    echo "  部署模式: $mode"
+    echo "  安装路径: $install_path"
+    echo "============================================"
 
     # 创建临时下载目录
     local download_dir=$(mktemp -d)
     trap "rm -rf $download_dir" EXIT
 
     # 下载 release
+    log_info "开始下载版本 $version..."
     download_release "$version" "$download_dir"
+    echo ""
+
+    # 更新前比较差异
+    if [ "$is_update" = true ]; then
+        echo ""
+        log_info "正在分析更新差异..."
+        local diff_result=$(compare_files "$install_path" "$download_dir")
+        if [ -n "$diff_result" ]; then
+            echo ""
+            echo "============================================"
+            echo "  更新差异分析"
+            echo "============================================"
+            echo -e "$diff_result"
+            echo "============================================"
+            echo ""
+            read -p "是否继续更新？(Y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Nn]$ ]]; then
+                log_info "已取消更新"
+                exit 0
+            fi
+        else
+            log_info "无文件变更，继续更新..."
+        fi
+    else
+        # 首次安装时询问用户确认
+        echo ""
+        read -p "是否继续安装？(Y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            log_info "已取消安装"
+            exit 0
+        fi
+    fi
 
     # 执行安装或更新
     if [ "$is_update" = true ]; then
+        log_info "开始执行版本更新..."
         update_version "$install_path" "$mode" "$version" "$download_dir"
     else
+        log_info "开始执行全新安装..."
         fresh_install "$install_path" "$mode" "$version" "$download_dir"
     fi
 
     echo ""
     echo "============================================"
-    log_success "部署完成！"
+    if [ "$is_update" = true ]; then
+        log_success "更新完成！"
+    else
+        log_success "安装完成！"
+    fi
     echo "============================================"
     echo ""
     log_info "安装路径: $install_path"
     log_info "版本: $version"
-    log_info "模式: $mode"
+    log_info "部署模式: $mode"
 
     if [ "$mode" = "nginx" ]; then
         echo ""

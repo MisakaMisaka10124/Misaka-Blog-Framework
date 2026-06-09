@@ -194,9 +194,22 @@ export function removePost(slug: string): boolean {
   index.lastUpdated = new Date().toISOString();
   fs.writeFileSync(INDEX_PATH(), JSON.stringify(index, null, 2), 'utf-8');
 
-  // 从正确的月份目录删除 md 文件
-  const monthDir = getMonthDir(post.date);
-  const filePath = path.join(POSTS_DIR(), monthDir, `${slug}.md`);
+  // 从正确的月份目录删除 md 文件（按日期目录找不到时扫描所有月份目录）
+  const postsDir = POSTS_DIR();
+  let monthDir = getMonthDir(post.date);
+  let filePath = path.join(postsDir, monthDir, `${slug}.md`);
+  if (!fs.existsSync(filePath)) {
+    const entries = fs.readdirSync(postsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && /^\d{4}-\d{2}$/.test(entry.name)) {
+        const candidate = path.join(postsDir, entry.name, `${slug}.md`);
+        if (fs.existsSync(candidate)) {
+          filePath = candidate;
+          break;
+        }
+      }
+    }
+  }
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
   return true;

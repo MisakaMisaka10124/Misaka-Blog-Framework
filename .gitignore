@@ -10,6 +10,7 @@ dist/
 # Actual JSON config files (not templates)
 backend/data/config/core_server_config.json
 backend/data/config/visitor_stats.json
+backend/data/config/site_stats.json
 backend/data/langrage/site_config_en_us.json
 backend/data/langrage/site_config_zh_cn.json
 backend/data/langrage/site_config_zh_hk.json
@@ -18,9 +19,6 @@ backend/data/langrage/site_config_zh_hk.json
 backend/data/posts/**/*.md
 backend/data/posts/post_index.json
 backend/data/posts/tags/*.json
-
-# Legacy project (reference only)
-personal-web-set_副本/
 
 # Claude Code
 .claude/
@@ -36,6 +34,5 @@ doc/release-guide.md
 # OS
 .DS_Store
 *.local
-
 
 doc/release-guide.md

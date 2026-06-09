@@ -296,6 +296,7 @@ const content = ref('')
 const summary = ref('')
 const tags = ref<string[]>([])
 const newTag = ref('')
+const originalDate = ref('')
 const coverFile = ref<File | null>(null)
 const coverName = ref('')
 const coverPreview = ref('')
@@ -613,6 +614,7 @@ async function loadPost() {
     title.value = fm.title || slug.value
     summary.value = fm.summary || ''
     tags.value = Array.isArray(fm.tags) ? fm.tags : []
+    originalDate.value = fm.date || ''
     content.value = parsed.content
 
     if (data.meta?.cover) {
@@ -650,12 +652,15 @@ async function handleSave() {
   try {
     // 构建 frontmatter（标签值加引号，防止 YAML 解析问题）
     const quotedTags = tags.value.map(t => `"${String(t).replace(/"/g, '\\"')}"`)
+    const dateStr = isEditing.value && originalDate.value
+      ? originalDate.value
+      : new Date().toISOString().split('T')[0]
     const fmLines = [
       '---',
       `title: ${yamlEscape(title.value)}`,
       `summary: ${yamlEscape(summary.value || '')}`,
       `tags: [${quotedTags.join(', ')}]`,
-      `date: ${new Date().toISOString().split('T')[0]}`,
+      `date: ${dateStr}`,
     ]
     if (coverFile.value && coverName.value) {
       // 新上传封面：只写文件名（后端 writeFrontmatterField 会覆盖为完整URL）
