@@ -4,23 +4,33 @@
 
 ## 快速开始
 
+### 生产部署
+
+```bash
+curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
+chmod +x deploy.sh
+sudo ./deploy.sh --mode nginx
+```
+
+详见 [部署指南](./doc/deploy.md)。
+
+### 本地开发
+
 ```bash
 npm install
 
-# 复制示例配置
+# 复制示例配置并去掉 .example 后缀
 cp backend/data/config/core_server_config.example.json backend/data/config/core_server_config.json
 cp backend/data/langrage/site_config_zh_cn.example.json backend/data/langrage/site_config_zh_cn.json
+cp backend/data/langrage/site_config_zh_hk.example.json backend/data/langrage/site_config_zh_hk.json
+cp backend/data/langrage/site_config_en_us.example.json backend/data/langrage/site_config_en_us.json
 
-# 开发
+# 启动
 npm run dev        # 前端 :5173
 npm run server     # 后端 :3000
-
-# 生产
-npm run build
-npm run start
 ```
 
-Node.js >= 18。
+需要 Node.js >= 18。
 
 ## 功能
 
@@ -33,22 +43,23 @@ Node.js >= 18。
 ```
 backend/data/
 ├── config/
-│   ├── core_server_config.json   # 服务端配置
-│   ├── post_index.json           # 文章索引（自动生成）
-│   └── tags/                     # 标签索引（自动生成）
+│   ├── core_server_config.example.json  # 配置模板
+│   ├── core_server_config.json          # 实际配置（从模板复制，去掉 .example）
+│   └── tags/                            # 标签索引（自动生成）
 ├── langrage/
-│   └── site_config_{lang}.json   # 多语言站点配置
+│   ├── site_config_{lang}.example.json  # 语言配置模板
+│   └── site_config_{lang}.json          # 实际配置（从模板复制，去掉 .example）
 ├── images/
-│   ├── avatars/                  # 头像
-│   ├── backgrounds/              # 背景图
-│   ├── friends/                  # 友链头像
-│   └── social/                   # 社交图标 SVG
+│   ├── avatars/                         # 头像
+│   ├── backgrounds/                     # 背景图
+│   ├── friends/                         # 友链头像
+│   └── social/                          # 社交图标 SVG
 └── posts/
-    ├── *.md                      # 文章
-    └── images/                   # 文章图片（按 slug 分目录）
+    ├── *.md                             # 文章
+    └── images/                          # 文章图片（按 slug 分目录）
 ```
 
-前端不存储数据，`public/` 下只有 favicon 和 cursor。
+> **注意**: `.example` 文件是模板，使用时需要复制并去掉后缀。正式配置文件不会提交到仓库。
 
 ## 后台管理
 

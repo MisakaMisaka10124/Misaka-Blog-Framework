@@ -16,7 +16,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m' 
 
 # 默认配置
 DEFAULT_INSTALL_PATH="/var/www/Misaka-Blog-Framework"
@@ -25,10 +25,7 @@ REPO_OWNER="MisakaMisaka10124"
 REPO_NAME="Misaka-Blog-Framework"
 PM2_APP_NAME="personal_web"
 
-# =============================================================================
 # 工具函数
-# =============================================================================
-
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -81,9 +78,7 @@ EOF
     exit 0
 }
 
-# =============================================================================
 # 环境检查
-# =============================================================================
 
 check_dependencies() {
     local mode=$1
@@ -310,36 +305,6 @@ fresh_install() {
     log_info "解压后端文件..."
     tar -xzf "${download_dir}/backend.tar.gz" -C "$install_path"
 
-    # 创建 data 目录结构（如果不存在）
-    mkdir -p "${install_path}/backend/data/config"
-    mkdir -p "${install_path}/backend/data/images/avatars"
-    mkdir -p "${install_path}/backend/data/images/backgrounds"
-    mkdir -p "${install_path}/backend/data/images/friends"
-    mkdir -p "${install_path}/backend/data/images/social"
-    mkdir -p "${install_path}/backend/data/images/uploads"
-    mkdir -p "${install_path}/backend/data/langrage"
-    mkdir -p "${install_path}/backend/data/posts"
-
-    # 复制示例配置文件（如果配置不存在）
-    if [ ! -f "${install_path}/backend/data/config/core_server_config.json" ]; then
-        if [ -f "${install_path}/backend/data/config/core_server_config.example.json" ]; then
-            cp "${install_path}/backend/data/config/core_server_config.example.json" \
-               "${install_path}/backend/data/config/core_server_config.json"
-            log_info "已创建默认服务器配置文件"
-        fi
-    fi
-
-    # 复制示例语言配置文件
-    for lang in zh_cn zh_hk en_us; do
-        if [ ! -f "${install_path}/backend/data/langrage/site_config_${lang}.json" ]; then
-            if [ -f "${install_path}/backend/data/langrage/site_config_${lang}.example.json" ]; then
-                cp "${install_path}/backend/data/langrage/site_config_${lang}.example.json" \
-                   "${install_path}/backend/data/langrage/site_config_${lang}.json"
-                log_info "已创建默认 ${lang} 语言配置"
-            fi
-        fi
-    done
-
     # 安装依赖
     log_info "安装 npm 依赖..."
     cd "$install_path"
@@ -401,8 +366,12 @@ update_version() {
     # 备份文章和标签
     if [ -d "${install_path}/backend/data/posts" ]; then
         mkdir -p "$backup_dir/posts"
-        # 备份文章 markdown 文件
-        find "${install_path}/backend/data/posts" -name "*.md" -exec cp --parents {} "$backup_dir/" \;
+        # 备份文章 markdown 文件（兼容 macOS，不使用 cp --parents）
+        find "${install_path}/backend/data/posts" -name "*.md" | while read file; do
+            relpath="${file#${install_path}/backend/data/posts/}"
+            mkdir -p "$backup_dir/posts/$(dirname "$relpath")"
+            cp "$file" "$backup_dir/posts/$relpath"
+        done
         # 备份文章索引和标签
         cp "${install_path}/backend/data/posts/post_index.json" "$backup_dir/posts/" 2>/dev/null || true
         cp -r "${install_path}/backend/data/posts/tags" "$backup_dir/posts/" 2>/dev/null || true
@@ -524,6 +493,7 @@ update_version() {
 
 setup_pm2() {
     local install_path=$1
+    local is_update=${2:-false}
 
     log_info "配置 pm2..."
 
@@ -570,8 +540,10 @@ EOF
 
     log_success "pm2 服务已启动"
 
-    # 询问是否配置 Nginx
-    ask_nginx_config "$install_path"
+    # 只有首次部署才询问是否配置 Nginx
+    if [ "$is_update" = false ]; then
+        ask_nginx_config "$install_path"
+    fi
 }
 
 ask_nginx_config() {
@@ -807,6 +779,7 @@ EOF
 
 setup_docker() {
     local install_path=$1
+    local is_update=${2:-false}
 
     log_info "配置 Docker..."
 
@@ -832,8 +805,10 @@ EOF
 
     log_success "Docker 服务已启动"
 
-    # 询问是否配置 Nginx
-    ask_nginx_config "$install_path"
+    # 只有首次部署才询问是否配置 Nginx
+    if [ "$is_update" = false ]; then
+        ask_nginx_config "$install_path"
+    fi
 }
 
 stop_services() {
