@@ -46,9 +46,20 @@ jobs:
           TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
         run: |
           mkdir -p release-assets
-          gh release download "${TAG}" \
-            -D release-assets/ \
-            --repo "${{ github.repository }}"
+          # 等待 Build and Release 上传资产完成（最多等 5 分钟）
+          for i in $(seq 1 30); do
+            if gh release download "${TAG}" -D release-assets/ --repo "${{ github.repository }}" 2>/dev/null; then
+              echo "[INFO] 资产下载成功"
+              break
+            fi
+            echo "[INFO] 等待资产上传完成... (${i}/30)"
+            sleep 10
+          done
+          # 最终检查
+          if [ -z "$(ls -A release-assets/ 2>/dev/null)" ]; then
+            echo "[ERROR] 等待超时，Release 无资产"
+            exit 1
+          fi
 
       - name: Sync release to Gitee
         env:
