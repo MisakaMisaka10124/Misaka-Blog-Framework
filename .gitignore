@@ -36,3 +36,5 @@ doc/release-guide.md
 *.local
 
 doc/release-guide.md
+
+main.html

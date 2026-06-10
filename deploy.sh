@@ -3,7 +3,7 @@
 # =============================================================================
 # Misaka Blog Framework 部署/更新脚本
 # 用法: ./deploy.sh [选项]
-#   --mode <nginx|docker>    部署模式（不指定时交互式询问）
+#   --mode <pm2|docker>      部署模式（不指定时交互式询问）
 #   --version <版本号>       指定版本（默认: 最新版本）
 #   --path <安装路径>        安装路径（默认: /var/www/Misaka-Blog-Framework）
 #   --help                   显示帮助信息
@@ -20,7 +20,7 @@ NC='\033[0m'
 
 # 默认配置
 DEFAULT_INSTALL_PATH="/var/www/Misaka-Blog-Framework"
-DEFAULT_MODE="nginx"
+DEFAULT_MODE="pm2"
 REPO_OWNER="MisakaMisaka10124"
 REPO_NAME="Misaka-Blog-Framework"
 PM2_APP_NAME="personal_web"
@@ -56,32 +56,33 @@ Misaka Blog Framework 部署/更新脚本
 用法: ./deploy.sh [选项]
 
 选项:
-  --mode <nginx|docker>    部署模式（不指定时自动检测或交互式询问）
+  --mode <pm2|docker>      部署模式（不指定时自动检测或交互式询问）
   --version <版本号>       指定版本，如 v1.0.0（默认: 最新版本）
   --path <安装路径>        安装路径（默认: /var/www/Misaka-Blog-Framework）
   --help                   显示此帮助信息
 
 行为说明:
-  - 首次安装: 如果未指定模式，会交互式询问选择 nginx 或 docker
+  - 首次安装: 如果未指定模式，会交互式询问选择 pm2 或 docker
   - 更新模式: 自动检测当前部署方式，无需重新选择
   - 更新模式: 跳过 Nginx 配置询问（已配置则保留）
   - 更新模式: 显示文件差异分析，确认后才执行更新
+  - 两种模式都支持配置 Nginx 反向代理
 
 示例:
   # 交互式选择模式（首次安装会询问）
   ./deploy.sh
 
-  # 直接指定 Nginx + pm2 模式
-  ./deploy.sh --mode nginx
+  # 直接指定 pm2 模式
+  ./deploy.sh --mode pm2
 
   # 更新到指定版本
-  ./deploy.sh --mode nginx --version v1.2.0
+  ./deploy.sh --mode pm2 --version v1.2.0
 
   # Docker 模式安装
   ./deploy.sh --mode docker
 
   # 自定义安装路径
-  ./deploy.sh --path /opt/my-blog --mode nginx
+  ./deploy.sh --path /opt/my-blog --mode pm2
 
 EOF
     exit 0
@@ -161,7 +162,7 @@ check_dependencies() {
     log_success "tar 已安装"
 
     # 根据模式检查特定依赖
-    if [ "$mode" = "nginx" ]; then
+    if [ "$mode" = "pm2" ]; then
         # 检查 pm2（自动安装）
         if ! command -v pm2 &> /dev/null; then
             log_warn "未找到 pm2，正在自动安装..."
@@ -229,7 +230,7 @@ detect_current_mode() {
 
     # 检查是否存在 pm2 进程
     if command -v pm2 &> /dev/null && pm2 list 2>/dev/null | grep -q "$PM2_APP_NAME"; then
-        echo "nginx"
+        echo "pm2"
         return 0
     fi
 
@@ -242,11 +243,17 @@ detect_current_mode() {
         fi
     fi
 
-    # 检查是否有 nginx 配置文件
-    if [ -f "/etc/nginx/sites-enabled/misaka-blog" ] || [ -f "/etc/nginx/sites-available/misaka-blog" ]; then
-        echo "nginx"
-        return 0
-    fi
+    # 检查是否有 nginx 配置文件（兼容 Linux 和 macOS）
+    local nginx_conf_dirs=("/etc/nginx/sites-available" "/usr/local/etc/nginx/servers")
+    local nginx_conf_names=("misaka-blog" "misaka-blog.conf")
+    for dir in "${nginx_conf_dirs[@]}"; do
+        for name in "${nginx_conf_names[@]}"; do
+            if [ -f "${dir}/${name}" ]; then
+                echo "pm2"
+                return 0
+            fi
+        done
+    done
 
     # 无法检测到
     echo ""
@@ -416,7 +423,7 @@ fresh_install() {
     log_success "依赖安装完成"
 
     # 根据模式配置服务
-    if [ "$mode" = "nginx" ]; then
+    if [ "$mode" = "pm2" ]; then
         setup_pm2 "$install_path" "false"
     elif [ "$mode" = "docker" ]; then
         setup_docker "$install_path" "false"
@@ -718,23 +725,37 @@ ask_nginx_config() {
         echo ""
         log_info "跳过 Nginx 配置"
         echo ""
-        echo "如需手动配置，请执行："
-        echo ""
-        echo "  # 1. 安装 Nginx（如果没有）"
-        echo "  sudo apt install nginx"
-        echo ""
-        echo "  # 2. 复制配置文件"
-        echo "  sudo cp ${install_path}/nginx.conf /etc/nginx/sites-available/misaka-blog"
-        echo ""
-        echo "  # 3. 修改配置（替换域名）"
-        echo "  sudo nano /etc/nginx/sites-available/misaka-blog"
-        echo ""
-        echo "  # 4. 启用站点"
-        echo "  sudo ln -s /etc/nginx/sites-available/misaka-blog /etc/nginx/sites-enabled/"
-        echo ""
-        echo "  # 5. 测试并重启"
-        echo "  sudo nginx -t && sudo systemctl restart nginx"
-        echo ""
+        if [ "$(uname)" = "Darwin" ]; then
+            echo "如需手动配置（macOS），请执行："
+            echo ""
+            echo "  # 1. 安装 Nginx（如果没有）"
+            echo "  brew install nginx"
+            echo ""
+            echo "  # 2. 编辑配置文件"
+            echo "  nano /usr/local/etc/nginx/servers/misaka-blog.conf"
+            echo ""
+            echo "  # 3. 测试并重启"
+            echo "  nginx -t && brew services restart nginx"
+            echo ""
+        else
+            echo "如需手动配置（Linux），请执行："
+            echo ""
+            echo "  # 1. 安装 Nginx（如果没有）"
+            echo "  sudo apt install nginx"
+            echo ""
+            echo "  # 2. 复制配置文件"
+            echo "  sudo cp ${install_path}/nginx.conf /etc/nginx/sites-available/misaka-blog"
+            echo ""
+            echo "  # 3. 修改配置（替换域名）"
+            echo "  sudo nano /etc/nginx/sites-available/misaka-blog"
+            echo ""
+            echo "  # 4. 启用站点"
+            echo "  sudo ln -s /etc/nginx/sites-available/misaka-blog /etc/nginx/sites-enabled/"
+            echo ""
+            echo "  # 5. 测试并重启"
+            echo "  sudo nginx -t && sudo systemctl restart nginx"
+            echo ""
+        fi
     fi
 }
 
@@ -751,7 +772,9 @@ setup_nginx() {
 
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             log_info "正在安装 Nginx..."
-            if command -v apt-get &> /dev/null; then
+            if [ "$(uname)" = "Darwin" ]; then
+                brew install nginx
+            elif command -v apt-get &> /dev/null; then
                 sudo apt-get update && sudo apt-get install -y nginx
             elif command -v yum &> /dev/null; then
                 sudo yum install -y nginx
@@ -784,8 +807,18 @@ setup_nginx() {
         use_https=true
     fi
 
-    # 创建 Nginx 配置
-    local nginx_config="/etc/nginx/sites-available/misaka-blog"
+    # 根据平台确定 Nginx 配置路径
+    local nginx_config=""
+    local nginx_enabled_dir=""
+    local is_macos=false
+    if [ "$(uname)" = "Darwin" ]; then
+        is_macos=true
+        nginx_config="/usr/local/etc/nginx/servers/misaka-blog.conf"
+        mkdir -p "/usr/local/etc/nginx/servers"
+    else
+        nginx_config="/etc/nginx/sites-available/misaka-blog"
+        nginx_enabled_dir="/etc/nginx/sites-enabled"
+    fi
 
     if [ "$use_https" = true ]; then
         # HTTPS 配置
@@ -903,20 +936,31 @@ EOF
         log_success "Nginx HTTP 配置已创建"
     fi
 
-    # 启用站点
-    if [ ! -f "/etc/nginx/sites-enabled/misaka-blog" ]; then
-        sudo ln -s "$nginx_config" /etc/nginx/sites-enabled/
+    # 启用站点（仅 Linux 需要 symlink）
+    if [ "$is_macos" = false ]; then
+        if [ ! -f "${nginx_enabled_dir}/misaka-blog" ]; then
+            sudo mkdir -p "$nginx_enabled_dir"
+            sudo ln -s "$nginx_config" "$nginx_enabled_dir/"
+        fi
+        # 删除默认站点（如果存在）
+        if [ -f "${nginx_enabled_dir}/default" ]; then
+            sudo rm "${nginx_enabled_dir}/default"
+        fi
     fi
 
-    # 删除默认站点（如果存在）
-    if [ -f "/etc/nginx/sites-enabled/default" ]; then
-        sudo rm /etc/nginx/sites-enabled/default
-    fi
-
-    # 测试配置
+    # 测试配置并重启
     log_info "测试 Nginx 配置..."
-    if sudo nginx -t; then
-        sudo systemctl restart nginx
+    local nginx_test_cmd="nginx -t"
+    local nginx_restart_cmd=""
+    if [ "$is_macos" = true ]; then
+        nginx_restart_cmd="brew services restart nginx"
+    else
+        nginx_test_cmd="sudo nginx -t"
+        nginx_restart_cmd="sudo systemctl restart nginx"
+    fi
+
+    if $nginx_test_cmd; then
+        $nginx_restart_cmd
         log_success "Nginx 配置完成并已重启"
         echo ""
         echo "现在可以通过 http://${domain} 访问网站"
@@ -966,7 +1010,7 @@ stop_services() {
 
     log_info "停止服务..."
 
-    if [ "$mode" = "nginx" ]; then
+    if [ "$mode" = "pm2" ]; then
         if command -v pm2 &> /dev/null; then
             pm2 stop "$PM2_APP_NAME" 2>/dev/null || true
             log_success "pm2 服务已停止"
@@ -986,7 +1030,7 @@ start_services() {
 
     log_info "启动服务..."
 
-    if [ "$mode" = "nginx" ]; then
+    if [ "$mode" = "pm2" ]; then
         cd "$install_path"
         if pm2 list | grep -q "$PM2_APP_NAME"; then
             pm2 restart "$PM2_APP_NAME"
@@ -1067,62 +1111,22 @@ main() {
             fi
         else
             log_warn "无法自动检测当前部署方式"
-            if [ -z "$mode" ]; then
-                echo ""
-                echo "请选择部署模式:"
-                echo "  1) nginx - 使用 Nginx + pm2 部署（推荐）"
-                echo "  2) docker - 使用 Docker Compose 部署"
-                echo ""
-                read -p "请输入选项 [1/2]: " choice
-                case "$choice" in
-                    1)
-                        mode="nginx"
-                        ;;
-                    2)
-                        mode="docker"
-                        ;;
-                    *)
-                        log_error "无效的选项: $choice，请输入 1 或 2"
-                        ;;
-                esac
-            fi
         fi
     else
         log_info "检测到全新安装"
     fi
 
-    # 如果未指定模式且无法自动检测，交互式询问用户
+    # 如果未指定模式，交互式询问用户
     if [ -z "$mode" ]; then
         echo ""
         echo "请选择部署模式:"
-        echo "  1) nginx - 使用 Nginx + pm2 部署（推荐）"
+        echo "  1) pm2   - 使用 pm2 进程管理部署（推荐）"
         echo "  2) docker - 使用 Docker Compose 部署"
         echo ""
         read -p "请输入选项 [1/2]: " choice
         case "$choice" in
             1)
-                mode="nginx"
-                ;;
-            2)
-                mode="docker"
-                ;;
-            *)
-                log_error "无效的选项: $choice，请输入 1 或 2"
-                ;;
-        esac
-    fi
-
-    # 如果未指定模式且无法自动检测，交互式询问用户
-    if [ -z "$mode" ]; then
-        echo ""
-        echo "请选择部署模式:"
-        echo "  1) nginx - 使用 Nginx + pm2 部署（推荐）"
-        echo "  2) docker - 使用 Docker Compose 部署"
-        echo ""
-        read -p "请输入选项 [1/2]: " choice
-        case "$choice" in
-            1)
-                mode="nginx"
+                mode="pm2"
                 ;;
             2)
                 mode="docker"
@@ -1134,8 +1138,8 @@ main() {
     fi
 
     # 验证模式
-    if [ "$mode" != "nginx" ] && [ "$mode" != "docker" ]; then
-        log_error "无效的部署模式: $mode，支持 nginx 或 docker"
+    if [ "$mode" != "pm2" ] && [ "$mode" != "docker" ]; then
+        log_error "无效的部署模式: $mode，支持 pm2 或 docker"
     fi
 
     log_success "部署模式验证通过: $mode"
@@ -1262,7 +1266,7 @@ main() {
     log_info "版本: $version"
     log_info "部署模式: $mode"
 
-    if [ "$mode" = "nginx" ]; then
+    if [ "$mode" = "pm2" ]; then
         echo ""
         log_info "常用命令:"
         echo "  查看状态: pm2 status"
