@@ -26,9 +26,19 @@ export function getMonthDirFromSlug(slug: string): string {
 }
 
 /** 从 Markdown 内容提取元数据 */
-function extractMeta(filename: string, content: string, filePath?: string): PostMeta {
+function extractMeta(filename: string, content: string, filePath?: string): PostMeta | null {
   const slug = filename.replace(/\.md$/, '');
-  const { data: frontmatter, content: body } = matter(content);
+  let frontmatter: Record<string, any> = {};
+  let body = content;
+
+  try {
+    const parsed = matter(content);
+    frontmatter = parsed.data;
+    body = parsed.content;
+  } catch (err: any) {
+    console.error(`[PostIndex] YAML 解析失败，跳过文件: ${filename} - ${err.message}`);
+    return null;
+  }
 
   // 标题：优先 frontmatter，其次首行 H1，最后用 slug
   let title = String(frontmatter.title || '');
@@ -99,6 +109,7 @@ export function scanPosts(): PostMeta[] {
         const filePath = path.join(monthDir, file);
         const content = fs.readFileSync(filePath, 'utf-8');
         const meta = extractMeta(file, content, filePath);
+        if (!meta) continue; // YAML 解析失败，跳过
         const mtime = fs.statSync(filePath).mtimeMs;
         allPosts.push({ meta, mtime });
       }
@@ -157,6 +168,7 @@ export function addOrUpdatePost(slug: string): PostMeta | null {
 
   const content = fs.readFileSync(filePath, 'utf-8');
   const meta = extractMeta(`${slug}.md`, content, filePath);
+  if (!meta) return null; // YAML 解析失败
 
   const index = readIndex();
   const existing = index.posts.findIndex(p => p.slug === slug);

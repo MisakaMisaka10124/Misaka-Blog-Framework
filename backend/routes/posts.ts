@@ -34,11 +34,12 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    // 文件名空格替换为连字符，避免 markdown 解析截断 URL
-    const sanitized = file.originalname.replace(/\s+/g, '-');
+    // 移除文件名中的非 ASCII 字符（避免中文等字符导致 YAML 解析异常）
+    // 保留时间戳+扩展名，确保文件名安全
+    const ext = path.extname(file.originalname);
     const name = IMAGE_RE.test(file.originalname)
-      ? `${Date.now()}-${sanitized}`
-      : sanitized;
+      ? `${Date.now()}${ext}`
+      : file.originalname.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '-') || `${Date.now()}${ext}`;
     cb(null, name);
   }
 });
