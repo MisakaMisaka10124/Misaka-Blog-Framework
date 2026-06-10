@@ -34,16 +34,15 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    // 移除文件名中的非 ASCII 字符（避免中文等字符导致 YAML 解析异常）
-    // 保留时间戳+扩展名，确保文件名安全
-    const ext = path.extname(file.originalname);
+    // 空格替换为连字符，避免 markdown 解析截断 URL
+    const sanitized = file.originalname.replace(/\s+/g, '-');
     const name = IMAGE_RE.test(file.originalname)
-      ? `${Date.now()}${ext}`
-      : file.originalname.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '-') || `${Date.now()}${ext}`;
+      ? `${Date.now()}-${sanitized}`
+      : sanitized;
     cb(null, name);
   }
 });
-const upload = multer({ storage });
+const upload = multer({ storage, defParamCharset: 'utf8' });
 
 /** 将图片从临时目录移动到 slug 目录 */
 function moveImageToSlugDir(tempPath: string, slug: string, filename: string, monthDir?: string): string {
