@@ -14,7 +14,7 @@
 
 | 依赖 | 模式 | 说明 |
 |------|------|------|
-| pm2 | Nginx 模式 | 脚本自动安装 |
+| pm2 | pm2 模式 | 脚本自动安装 |
 | Nginx | 两种模式 | 脚本询问是否安装 |
 | Docker | Docker 模式 | 需提前安装 |
 | Docker Compose | Docker 模式 | 需提前安装 |
@@ -100,7 +100,11 @@ brew install --cask docker
 ### 下载部署脚本
 
 ```bash
-# 下载部署脚本
+# 国内服务器（推荐，默认 Gitee 源）
+curl -L -O https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
+chmod +x deploy.sh
+
+# 海外服务器（GitHub 源）
 curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
 chmod +x deploy.sh
 ```
@@ -108,19 +112,24 @@ chmod +x deploy.sh
 ### 运行部署
 
 ```bash
-# 交互式选择模式（推荐新手使用）
+# 交互式选择模式（推荐新手使用，默认从 Gitee 下载）
 sudo ./deploy.sh
 
-# 或直接指定模式
-sudo ./deploy.sh --mode nginx    # Nginx + pm2 模式
+# 指定模式
+sudo ./deploy.sh --mode pm2      # pm2 模式（推荐）
 sudo ./deploy.sh --mode docker   # Docker 模式
+
+# 指定下载源
+sudo ./deploy.sh --source gitee   # 国内 Gitee 源（默认）
+sudo ./deploy.sh --source github  # 海外 GitHub 源
 ```
 
-> 不指定 `--mode` 参数时，脚本会交互式询问选择 nginx 还是 docker 模式。
+> 不指定 `--mode` 参数时，脚本会交互式询问选择 pm2 还是 docker 模式。
+> 不指定 `--source` 参数时，默认使用 Gitee 源（国内下载更快）。
 
 ---
 
-## 方式一：Nginx + pm2 模式（推荐）
+## 方式一：pm2 模式（推荐）
 
 ### 首次安装
 
@@ -130,11 +139,14 @@ node -v    # 需要 v18+
 npm -v     # 需要 9+
 
 # 2. 下载部署脚本（如果还没有）
+# 国内服务器
+curl -L -O https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
+# 海外服务器
 curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
 chmod +x deploy.sh
 
 # 3. 运行安装
-sudo ./deploy.sh --mode nginx
+sudo ./deploy.sh --mode pm2
 
 # 脚本会自动：
 # ✓ 检查依赖（缺少会提示安装方法）
@@ -153,11 +165,15 @@ sudo ./deploy.sh --mode nginx
 ### 版本更新
 
 ```bash
-# 更新到最新版本（自动更新后端和前端）
-sudo ./deploy.sh --mode nginx
+# 更新到最新版本（默认 Gitee 源）
+sudo ./deploy.sh --mode pm2
 
 # 更新到指定版本
-sudo ./deploy.sh --mode nginx --version v1.2.0
+sudo ./deploy.sh --mode pm2 --version v1.2.0
+
+# 指定下载源
+sudo ./deploy.sh --mode pm2 --source gitee
+sudo ./deploy.sh --mode pm2 --source github
 ```
 
 ---
@@ -173,6 +189,9 @@ docker --version     # 需要 Docker
 docker compose version  # 需要 Docker Compose V2
 
 # 2. 下载部署脚本（如果还没有）
+# 国内服务器
+curl -L -O https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
+# 海外服务器
 curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
 chmod +x deploy.sh
 
@@ -200,17 +219,25 @@ sudo ./deploy.sh
 ### 版本更新
 
 ```bash
-# 更新到最新版本
+# 更新到最新版本（默认 Gitee 源）
 sudo ./deploy.sh --mode docker
+
+# 指定下载源
+sudo ./deploy.sh --mode docker --source gitee
+sudo ./deploy.sh --mode docker --source github
 ```
 
 ### 方式二：手动部署
 
-#### Nginx + pm2 模式
+#### pm2 模式
 
 1. **下载 Release**
    ```bash
-   # 从 GitHub Releases 下载
+   # 国内服务器（Gitee）
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/dist.tar.gz
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/backend.tar.gz
+
+   # 海外服务器（GitHub）
    wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/dist.tar.gz
    wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/backend.tar.gz
    ```
@@ -242,6 +269,11 @@ sudo ./deploy.sh --mode docker
 
 1. **下载 Release**
    ```bash
+   # 国内服务器（Gitee）
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/dist.tar.gz
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/backend.tar.gz
+
+   # 海外服务器（GitHub）
    wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/dist.tar.gz
    wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/backend.tar.gz
    ```
@@ -261,7 +293,7 @@ sudo ./deploy.sh --mode docker
 
 ## 部署架构
 
-### Nginx + pm2 模式
+### pm2 模式
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -358,8 +390,8 @@ sudo ./deploy.sh --mode docker
 
 ### 两种模式对比
 
-| 特性 | Nginx + pm2 | Docker |
-|------|-------------|--------|
+| 特性 | pm2 模式 | Docker 模式 |
+|------|----------|-------------|
 | 性能 | ⭐⭐⭐ 更高（Nginx 处理静态文件） | ⭐⭐ 稍低 |
 | 部署复杂度 | ⭐⭐ 需要配置 Nginx | ⭐⭐⭐ 更简单 |
 | 资源占用 | ⭐⭐⭐ 更低 | ⭐⭐ 稍高 |
@@ -449,7 +481,7 @@ nano /var/www/Misaka-Blog-Framework/backend/data/langrage/site_config_zh_cn.json
 
 ```bash
 # 重启服务使配置生效
-pm2 restart personal_web    # Nginx + pm2 模式
+pm2 restart personal_web    # pm2 模式
 # 或
 docker compose restart      # Docker 模式
 ```
@@ -474,7 +506,7 @@ docker compose restart      # Docker 模式
 
 ## 常用命令
 
-### Nginx + pm2 模式
+### pm2 模式
 
 ```bash
 # 查看服务状态

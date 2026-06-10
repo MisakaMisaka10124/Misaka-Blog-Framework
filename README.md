@@ -7,9 +7,15 @@
 ### 生产部署
 
 ```bash
+# 国内服务器（推荐）
+curl -L -O https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
+chmod +x deploy.sh
+sudo ./deploy.sh
+
+# 海外服务器
 curl -L -O https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/raw/main/deploy.sh
 chmod +x deploy.sh
-sudo ./deploy.sh --mode nginx
+sudo ./deploy.sh --source github
 ```
 
 详见 [部署指南](./doc/deploy.md)。
