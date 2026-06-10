@@ -180,6 +180,18 @@ check_dependencies() {
         else
             log_success "pm2 $(pm2 -v)"
         fi
+
+        # 检查 tsx（自动安装）
+        if ! command -v tsx &> /dev/null; then
+            log_warn "未找到 tsx，正在自动安装..."
+            npm install -g tsx
+            if [ $? -ne 0 ]; then
+                log_error "tsx 安装失败，请手动运行: npm install -g tsx"
+            fi
+            log_success "tsx 已安装"
+        else
+            log_success "tsx 已安装"
+        fi
     elif [ "$mode" = "docker" ]; then
         # 检查 docker
         if ! command -v docker &> /dev/null; then
