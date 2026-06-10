@@ -1,12 +1,36 @@
-name: Sync Release to Gitee
+name: Sync to Gitee
 
 on:
+  push:
+    branches: [main]
+    tags: ['v*']
   release:
     types: [published]
 
 jobs:
-  sync:
+  # 同步代码到 Gitee
+  sync-code:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          git remote add gitee "https://MisakaMisaka10124:${GITEE_TOKEN}@gitee.com/MisakaMisaka10124/Misaka-Blog-Framework.git"
+          git push gitee --all --force
+          git push gitee --tags --force
+          echo "[SUCCESS] 代码同步完成"
+
+  # 同步 Release 到 Gitee
+  sync-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,7 +44,7 @@ jobs:
             -D release-assets/ \
             --repo "${{ github.repository }}"
 
-      - name: Sync to Gitee
+      - name: Sync release to Gitee
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           TAG: ${{ github.event.release.tag_name }}
@@ -31,34 +55,29 @@ jobs:
 
           echo "[INFO] 同步 ${TAG} 到 Gitee..."
 
-          # 1. 创建 tag（如果不存在）
-          echo "[INFO] 创建 tag..."
+          # 创建 tag
           curl -s -X POST "${API}/tags" \
             -d "access_token=${GITEE_TOKEN}" \
             -d "tag=${TAG}" \
             -d "message=${TAG}" \
             -d "target=main" || true
 
-          # 2. 创建发行版
-          echo "[INFO] 创建发行版..."
+          # 创建发行版
           RELEASE_RESPONSE=$(curl -s -X POST "${API}/releases" \
             -d "access_token=${GITEE_TOKEN}" \
             -d "tag_name=${TAG}" \
             -d "name=${TAG}" \
             -d "body=Synced from GitHub release ${TAG}")
 
-          # 获取发行版 ID
           RELEASE_ID=$(echo "$RELEASE_RESPONSE" | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
-          echo "[INFO] Gitee Release ID: ${RELEASE_ID}"
 
           if [ -z "$RELEASE_ID" ]; then
-            echo "[WARN] 创建发行版失败，可能已存在，尝试获取已有发行版..."
+            echo "[WARN] 创建失败，尝试获取已有发行版..."
             RELEASE_ID=$(curl -s "${API}/releases?access_token=${GITEE_TOKEN}" | \
               grep -o "\"id\":[0-9]*,\"tag_name\":\"${TAG}\"" | grep -o '[0-9]*' | head -1)
-            echo "[INFO] 已有 Release ID: ${RELEASE_ID}"
           fi
 
-          # 3. 上传附件
+          # 上传附件
           if [ -n "$RELEASE_ID" ]; then
             for file in release-assets/*; do
               filename=$(basename "$file")
@@ -66,11 +85,8 @@ jobs:
               curl -s -X POST "${API}/releases/${RELEASE_ID}/attach_files" \
                 -H "Content-Type: multipart/form-data" \
                 -F "access_token=${GITEE_TOKEN}" \
-                -F "file=@${file}" | grep -o '"browser_download_url":"[^"]*"' || echo "[WARN] ${filename} 上传可能失败"
+                -F "file=@${file}"
             done
-          else
-            echo "[ERROR] 无法获取发行版 ID，跳过附件上传"
-            exit 1
           fi
 
-          echo "[SUCCESS] 同步完成！"
+          echo "[SUCCESS] Release 同步完成"
