@@ -336,10 +336,12 @@ const readTime = computed(() => {
 
 // 工具函数
 function parseFrontmatter(raw: string) {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
-  if (!match) return { data: {}, content: raw }
+  // 统一换行符，避免 \r\n 导致行匹配失败
+  const normalized = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const match = normalized.match(/^---\n([\s\S]*?)\n---\n?/)
+  if (!match) return { data: {}, content: normalized }
   const yaml = match[1]
-  const body = raw.slice(match[0].length)
+  const body = normalized.slice(match[0].length)
   const data: Record<string, any> = {}
   for (const line of yaml.split('\n')) {
     const m = line.match(/^(\w+):\s*(.*)$/)
@@ -671,7 +673,8 @@ async function handleSave() {
     }
     fmLines.push('---', '')
     const frontmatter = fmLines.join('\n')
-    const fullContent = frontmatter + content.value
+    // 统一换行符为 \n，避免 \r\n 导致后端解析问题
+    const fullContent = frontmatter + content.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 
     if (isEditing.value) {
       // 编辑已有文章
@@ -726,6 +729,22 @@ onMounted(() => {
   startEditTimer()
 
   if (isEditing.value) {
+    loadPost()
+  }
+})
+
+// 监听 slug 变化（Vue Router 复用组件时 onMounted 不会重新触发）
+watch(slug, (newSlug, oldSlug) => {
+  if (newSlug && newSlug !== oldSlug) {
+    // 重置表单状态
+    title.value = ''
+    summary.value = ''
+    tags.value = []
+    content.value = ''
+    originalDate.value = ''
+    coverFile.value = null
+    coverName.value = ''
+    coverPreview.value = ''
     loadPost()
   }
 })
