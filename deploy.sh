@@ -1091,11 +1091,49 @@ start_services() {
 
     if [ "$mode" = "pm2" ]; then
         cd "$install_path"
-        if pm2 list | grep -q "$PM2_APP_NAME"; then
-            pm2 restart "$PM2_APP_NAME"
+
+        # 确保 ecosystem.config.js 存在（更新后可能丢失）
+        if [ ! -f "${install_path}/ecosystem.config.js" ]; then
+            log_warn "ecosystem.config.js 不存在，重新创建..."
+            cat > "${install_path}/ecosystem.config.js" << EOF
+module.exports = {
+  apps: [{
+    name: '${PM2_APP_NAME}',
+    script: 'npx',
+    args: 'tsx backend/index.ts',
+    cwd: '${install_path}',
+    env: {
+      NODE_ENV: 'production'
+    },
+    error_file: './logs/error.log',
+    out_file: './logs/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '256M',
+    restart_delay: 3000,
+    max_restarts: 10
+  }]
+}
+EOF
+        fi
+
+        mkdir -p "${install_path}/logs"
+
+        # 如果进程存在但状态异常，先删除再重建
+        if pm2 list 2>/dev/null | grep -q "$PM2_APP_NAME"; then
+            local pm2_status=$(pm2 jlist 2>/dev/null | grep -o "\"status\":\"[^\"]*\"" | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+            if [ "$pm2_status" = "errored" ] || [ "$pm2_status" = "stopped" ]; then
+                log_warn "pm2 进程状态异常 ($pm2_status)，重新启动..."
+                pm2 delete "$PM2_APP_NAME" 2>/dev/null || true
+                pm2 start ecosystem.config.js
+            else
+                pm2 restart "$PM2_APP_NAME"
+            fi
         else
             pm2 start ecosystem.config.js
         fi
+
         pm2 save
         log_success "pm2 服务已启动"
     elif [ "$mode" = "docker" ]; then
