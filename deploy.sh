@@ -263,15 +263,26 @@ detect_current_mode() {
 # 比较文件差异
 compare_files() {
     local old_dir=$1
-    local new_dir=$2
+    local download_dir=$2
     local diff_output=""
     local changes_count=0
 
     log_info "比较文件差异..."
 
+    # 先将压缩包解压到临时目录
+    local compare_dir="${download_dir}/compare_extract"
+    mkdir -p "$compare_dir"
+
+    if [ -f "${download_dir}/dist.tar.gz" ]; then
+        tar -xzf "${download_dir}/dist.tar.gz" -C "$compare_dir"
+    fi
+    if [ -f "${download_dir}/backend.tar.gz" ]; then
+        tar -xzf "${download_dir}/backend.tar.gz" -C "$compare_dir"
+    fi
+
     # 比较前端文件
-    if [ -d "${old_dir}/dist" ] && [ -d "${new_dir}/dist" ]; then
-        local frontend_diff=$(diff -rq "${old_dir}/dist" "${new_dir}/dist" 2>/dev/null | head -20)
+    if [ -d "${old_dir}/dist" ] && [ -d "${compare_dir}/dist" ]; then
+        local frontend_diff=$(diff -rq "${old_dir}/dist" "${compare_dir}/dist" 2>/dev/null | head -20)
         if [ -n "$frontend_diff" ]; then
             diff_output+="  前端文件变更:\n$frontend_diff\n"
             changes_count=$((changes_count + $(echo "$frontend_diff" | wc -l)))
@@ -279,8 +290,8 @@ compare_files() {
     fi
 
     # 比较后端文件（排除用户数据目录）
-    if [ -d "${old_dir}/backend" ] && [ -d "${new_dir}/backend" ]; then
-        local backend_diff=$(diff -rq --exclude="data" "${old_dir}/backend" "${new_dir}/backend" 2>/dev/null | head -20)
+    if [ -d "${old_dir}/backend" ] && [ -d "${compare_dir}/backend" ]; then
+        local backend_diff=$(diff -rq --exclude="data" "${old_dir}/backend" "${compare_dir}/backend" 2>/dev/null | head -20)
         if [ -n "$backend_diff" ]; then
             diff_output+="  后端文件变更:\n$backend_diff\n"
             changes_count=$((changes_count + $(echo "$backend_diff" | wc -l)))
@@ -288,13 +299,16 @@ compare_files() {
     fi
 
     # 比较 package.json
-    if [ -f "${old_dir}/package.json" ] && [ -f "${new_dir}/package.json" ]; then
-        local pkg_diff=$(diff "${old_dir}/package.json" "${new_dir}/package.json" 2>/dev/null)
+    if [ -f "${old_dir}/package.json" ] && [ -f "${compare_dir}/package.json" ]; then
+        local pkg_diff=$(diff "${old_dir}/package.json" "${compare_dir}/package.json" 2>/dev/null)
         if [ -n "$pkg_diff" ]; then
             diff_output+="  依赖变更:\n$pkg_diff\n"
             changes_count=$((changes_count + 1))
         fi
     fi
+
+    # 清理临时解压目录
+    rm -rf "$compare_dir"
 
     if [ -n "$diff_output" ]; then
         echo -e "$diff_output"
@@ -349,6 +363,28 @@ save_version() {
 # 下载函数
 # =============================================================================
 
+# 带重试的下载函数
+# 用法: download_with_retry <url> <输出文件> [最大重试次数]
+download_with_retry() {
+    local url=$1
+    local output=$2
+    local max_retries=${3:-3}
+    local retry=0
+
+    while [ $retry -lt $max_retries ]; do
+        if curl -L --connect-timeout 30 --retry 2 --retry-delay 5 -o "$output" "$url"; then
+            return 0
+        fi
+        retry=$((retry + 1))
+        if [ $retry -lt $max_retries ]; then
+            log_warn "下载失败，${retry}/${max_retries} 次重试，等待 5 秒..."
+            sleep 5
+        fi
+    done
+
+    return 1
+}
+
 download_release() {
     local version=$1
     local download_dir=$2
@@ -359,23 +395,20 @@ download_release() {
 
     # 下载校验文件
     log_info "下载校验文件 (checksums-sha256.txt)..."
-    curl -L -o "${download_dir}/checksums-sha256.txt" "${base_url}/checksums-sha256.txt"
-    if [ $? -ne 0 ]; then
-        log_error "下载校验文件失败"
+    if ! download_with_retry "${base_url}/checksums-sha256.txt" "${download_dir}/checksums-sha256.txt"; then
+        log_error "下载校验文件失败（已重试多次）。请检查网络连接或代理设置"
     fi
 
     # 下载 dist.tar.gz
     log_info "下载前端文件 (dist.tar.gz)..."
-    curl -L -o "${download_dir}/dist.tar.gz" "${base_url}/dist.tar.gz"
-    if [ $? -ne 0 ]; then
-        log_error "下载 dist.tar.gz 失败"
+    if ! download_with_retry "${base_url}/dist.tar.gz" "${download_dir}/dist.tar.gz"; then
+        log_error "下载 dist.tar.gz 失败（已重试多次）。请检查网络连接或代理设置"
     fi
 
     # 下载 backend.tar.gz
     log_info "下载后端文件 (backend.tar.gz)..."
-    curl -L -o "${download_dir}/backend.tar.gz" "${base_url}/backend.tar.gz"
-    if [ $? -ne 0 ]; then
-        log_error "下载 backend.tar.gz 失败"
+    if ! download_with_retry "${base_url}/backend.tar.gz" "${download_dir}/backend.tar.gz"; then
+        log_error "下载 backend.tar.gz 失败（已重试多次）。请检查网络连接或代理设置"
     fi
 
     # SHA256 校验
