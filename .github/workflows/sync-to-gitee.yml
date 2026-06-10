@@ -61,19 +61,23 @@ jobs:
 
           echo "[INFO] 同步 ${TAG} 到 Gitee..."
 
-          # 创建 tag
-          curl -s -X POST "${API}/tags" \
+          # 创建 tag（如果不存在）
+          echo "[INFO] 检查/创建 tag ${TAG}..."
+          TAG_RESPONSE=$(curl -s -X POST "${API}/tags" \
             -d "access_token=${GITEE_TOKEN}" \
-            -d "tag=${TAG}" \
-            -d "message=${TAG}" \
-            -d "target=main" || true
+            -d "tag_name=${TAG}" \
+            -d "refs=main" \
+            -d "message=${TAG}")
+          echo "[INFO] Tag 响应: ${TAG_RESPONSE}"
 
           # 创建发行版
+          echo "[INFO] 创建发行版..."
           RELEASE_RESPONSE=$(curl -s -X POST "${API}/releases" \
             -d "access_token=${GITEE_TOKEN}" \
             -d "tag_name=${TAG}" \
             -d "name=${TAG}" \
             -d "body=Synced from GitHub release ${TAG}")
+          echo "[INFO] 发行版响应: ${RELEASE_RESPONSE}"
 
           RELEASE_ID=$(echo "$RELEASE_RESPONSE" | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
 
@@ -81,18 +85,23 @@ jobs:
             echo "[WARN] 创建失败，尝试获取已有发行版..."
             RELEASE_ID=$(curl -s "${API}/releases?access_token=${GITEE_TOKEN}" | \
               grep -o "\"id\":[0-9]*,\"tag_name\":\"${TAG}\"" | grep -o '[0-9]*' | head -1)
+            echo "[INFO] 已有发行版 ID: ${RELEASE_ID}"
           fi
 
           # 上传附件
-          if [ -n "$RELEASE_ID" ]; then
-            for file in release-assets/*; do
-              filename=$(basename "$file")
-              echo "[INFO] 上传 ${filename}..."
-              curl -s -X POST "${API}/releases/${RELEASE_ID}/attach_files" \
-                -H "Content-Type: multipart/form-data" \
-                -F "access_token=${GITEE_TOKEN}" \
-                -F "file=@${file}"
-            done
+          if [ -z "$RELEASE_ID" ]; then
+            echo "[ERROR] 无法获取发行版 ID"
+            exit 1
           fi
+
+          for file in release-assets/*; do
+            filename=$(basename "$file")
+            echo "[INFO] 上传 ${filename}..."
+            UPLOAD_RESPONSE=$(curl -s -X POST "${API}/releases/${RELEASE_ID}/attach_files" \
+              -H "Content-Type: multipart/form-data" \
+              -F "access_token=${GITEE_TOKEN}" \
+              -F "file=@${file}")
+            echo "[INFO] 上传响应: ${UPLOAD_RESPONSE}"
+          done
 
           echo "[SUCCESS] Release 同步完成"
