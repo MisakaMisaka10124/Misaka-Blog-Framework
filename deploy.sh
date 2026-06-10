@@ -21,6 +21,7 @@ NC='\033[0m'
 # 默认配置
 DEFAULT_INSTALL_PATH="/var/www/Misaka-Blog-Framework"
 DEFAULT_MODE="pm2"
+DEFAULT_SOURCE="gitee"
 REPO_OWNER="MisakaMisaka10124"
 REPO_NAME="Misaka-Blog-Framework"
 PM2_APP_NAME="personal_web"
@@ -57,6 +58,7 @@ Misaka Blog Framework 部署/更新脚本
 
 选项:
   --mode <pm2|docker>      部署模式（不指定时自动检测或交互式询问）
+  --source <gitee|github>  下载源（默认: gitee）
   --version <版本号>       指定版本，如 v1.0.0（默认: 最新版本）
   --path <安装路径>        安装路径（默认: /var/www/Misaka-Blog-Framework）
   --help                   显示此帮助信息
@@ -67,9 +69,10 @@ Misaka Blog Framework 部署/更新脚本
   - 更新模式: 跳过 Nginx 配置询问（已配置则保留）
   - 更新模式: 显示文件差异分析，确认后才执行更新
   - 两种模式都支持配置 Nginx 反向代理
+  - 默认使用 Gitee 源，国内服务器下载更快；--source github 切换到 GitHub
 
 示例:
-  # 交互式选择模式（首次安装会询问）
+  # 交互式选择模式（首次安装会询问，默认 Gitee 源）
   ./deploy.sh
 
   # 直接指定 pm2 模式
@@ -77,6 +80,9 @@ Misaka Blog Framework 部署/更新脚本
 
   # 更新到指定版本
   ./deploy.sh --mode pm2 --version v1.2.0
+
+  # 使用 GitHub 源下载
+  ./deploy.sh --source github --version v1.2.0
 
   # Docker 模式安装
   ./deploy.sh --mode docker
@@ -321,22 +327,41 @@ compare_files() {
 }
 
 # =============================================================================
-# GitHub API 函数
+# Release API 函数（支持 GitHub / Gitee）
 # =============================================================================
 
-get_latest_version() {
-    log_info "获取最新版本信息..."
+# 获取下载源基础 URL
+get_base_url() {
+    local source=$1
+    local version=$2
+    if [ "$source" = "github" ]; then
+        echo "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${version}"
+    else
+        echo "https://gitee.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${version}"
+    fi
+}
 
-    local response=$(curl -s "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest")
+get_latest_version() {
+    local source=$1
+    log_info "获取最新版本信息（${source}）..."
+
+    local api_url=""
+    if [ "$source" = "github" ]; then
+        api_url="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
+    else
+        api_url="https://gitee.com/api/v5/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
+    fi
+
+    local response=$(curl -s --connect-timeout 30 "$api_url")
 
     if echo "$response" | grep -q '"message": "Not Found"'; then
-        log_error "未找到 Release，请先在 GitHub 上发布版本"
+        log_error "未找到 Release，请先在 ${source} 上发布版本"
     fi
 
     local version=$(echo "$response" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if [ -z "$version" ]; then
-        log_error "无法解析版本号，API 响应: $response"
+        log_error "无法解析版本号，请检查网络连接或切换下载源（--source github/gitee）"
     fi
 
     echo "$version"
@@ -388,10 +413,11 @@ download_with_retry() {
 download_release() {
     local version=$1
     local download_dir=$2
+    local source=$3
 
-    log_info "下载版本 ${version}..."
+    log_info "下载版本 ${version}（${source}）..."
 
-    local base_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${version}"
+    local base_url=$(get_base_url "$source" "$version")
 
     # 下载校验文件
     log_info "下载校验文件 (checksums-sha256.txt)..."
@@ -1086,6 +1112,7 @@ start_services() {
 main() {
     # 解析命令行参数
     local mode=""
+    local source="$DEFAULT_SOURCE"
     local version=""
     local install_path="$DEFAULT_INSTALL_PATH"
 
@@ -1093,6 +1120,10 @@ main() {
         case $1 in
             --mode)
                 mode="$2"
+                shift 2
+                ;;
+            --source)
+                source="$2"
                 shift 2
                 ;;
             --version)
@@ -1111,6 +1142,11 @@ main() {
                 ;;
         esac
     done
+
+    # 验证下载源
+    if [ "$source" != "github" ] && [ "$source" != "gitee" ]; then
+        log_error "无效的下载源: $source，支持 github 或 gitee"
+    fi
 
     # 检查是否已安装
     local current_version=$(get_current_version "$install_path")
@@ -1179,6 +1215,7 @@ main() {
 
     echo ""
     log_info "部署模式: $mode"
+    log_info "下载源: $source"
     log_info "安装路径: $install_path"
     echo ""
 
@@ -1189,7 +1226,7 @@ main() {
 
     # 获取版本信息
     if [ -z "$version" ]; then
-        version=$(get_latest_version)
+        version=$(get_latest_version "$source")
         log_info "获取最新版本: $version"
     else
         log_info "指定版本: $version"
@@ -1232,6 +1269,7 @@ main() {
         echo "  安装版本: $version"
     fi
     echo "  部署模式: $mode"
+    echo "  下载源:   $source"
     echo "  安装路径: $install_path"
     echo "============================================"
 
@@ -1241,7 +1279,7 @@ main() {
 
     # 下载 release
     log_info "开始下载版本 $version..."
-    download_release "$version" "$download_dir"
+    download_release "$version" "$download_dir" "$source"
     echo ""
 
     # 更新前比较差异
@@ -1298,6 +1336,7 @@ main() {
     log_info "安装路径: $install_path"
     log_info "版本: $version"
     log_info "部署模式: $mode"
+    log_info "下载源: $source"
 
     if [ "$mode" = "pm2" ]; then
         echo ""
