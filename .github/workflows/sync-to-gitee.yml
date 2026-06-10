@@ -6,6 +6,11 @@ on:
     tags: ['v*']
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要同步的 Release tag（如 v1.3.1），留空则仅同步代码'
+        required: false
 
 jobs:
   # 同步代码到 Gitee
@@ -30,7 +35,7 @@ jobs:
   # 同步 Release 到 Gitee
   sync-release:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,16 +43,17 @@ jobs:
       - name: Download release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
         run: |
           mkdir -p release-assets
-          gh release download "${{ github.event.release.tag_name }}" \
+          gh release download "${TAG}" \
             -D release-assets/ \
             --repo "${{ github.repository }}"
 
       - name: Sync release to Gitee
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
         run: |
           OWNER="MisakaMisaka10124"
           REPO="Misaka-Blog-Framework"
