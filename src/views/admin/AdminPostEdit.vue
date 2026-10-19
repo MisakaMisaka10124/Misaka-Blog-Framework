@@ -282,6 +282,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { compressImage as compressRasterImage } from '../../composables/compressImage'
 
 const router = useRouter()
 const route = useRoute()
@@ -453,18 +454,26 @@ function hideTagSuggestions() {
 }
 
 // 封面图片
-function handleCoverSelect(e: Event) {
+async function handleCoverSelect(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) {
-    coverFile.value = file
-    coverName.value = file.name
-    // 生成预览
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      coverPreview.value = e.target?.result as string
+    error.value = ''
+    compressing.value = true
+    try {
+      coverFile.value = await compressImage(file)
+      coverName.value = coverFile.value.name
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        coverPreview.value = event.target?.result as string
+      }
+      reader.readAsDataURL(coverFile.value)
+    } catch (e: any) {
+      error.value = '封面图片处理失败: ' + e.message
+    } finally {
+      compressing.value = false
     }
-    reader.readAsDataURL(file)
   }
+  ;(e.target as HTMLInputElement).value = ''
 }
 
 // 编辑器工具
@@ -507,8 +516,8 @@ function insertTab() {
 }
 
 // 图片压缩配置
-const imageCompressionMaxWidth = ref(1920)
-const imageCompressionQuality = ref(0.82)
+const imageCompressionMaxWidth = ref(1440)
+const imageCompressionQuality = ref(0.72)
 
 // 加载图片压缩配置
 async function loadCompressionConfig() {
@@ -530,38 +539,9 @@ async function loadCompressionConfig() {
 
 // 图片处理
 async function compressImage(file: File): Promise<File> {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')!
-        const maxWidth = imageCompressionMaxWidth.value
-        let { width, height } = img
-        if (width > maxWidth) {
-          height = Math.round((height / width) * maxWidth)
-          width = maxWidth
-        }
-        canvas.width = width
-        canvas.height = height
-        ctx.drawImage(img, 0, 0, width, height)
-        canvas.toBlob(
-          (blob) =>
-            resolve(
-              blob
-                ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
-                    type: 'image/jpeg',
-                  })
-                : file
-            ),
-          'image/jpeg',
-          imageCompressionQuality.value
-        )
-      }
-      img.src = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
+  return compressRasterImage(file, {
+    maxDimension: imageCompressionMaxWidth.value,
+    quality: imageCompressionQuality.value,
   })
 }
 

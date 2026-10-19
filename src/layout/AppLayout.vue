@@ -2,13 +2,16 @@
   <div class="app-layout">
     <!-- 背景系统 -->
     <div class="bg-system">
+      <Transition name="bg-fade">
       <img
-        v-for="(bg, index) in backgrounds"
-        :key="index"
-        :src="bg"
-        :class="['bg-system__image', { active: activeBgIndex === index }]"
+        v-if="backgrounds[activeBgIndex]"
+        :key="backgrounds[activeBgIndex]"
+        :src="backgrounds[activeBgIndex]"
+        class="bg-system__image active"
+        fetchpriority="high"
         alt=""
       />
+      </Transition>
     </div>
     <div class="glass-overlay"></div>
 
@@ -109,18 +112,19 @@ const backgroundTimeRanges = ref({
 
 // 根据时间选择背景（时间段模式）
 function updateBackgroundByTime() {
+  if (!backgrounds.value.length) return
   const hour = new Date().getHours()
   const ranges = backgroundTimeRanges.value
+  let index = 3
 
   if (hour >= ranges.morning[0] && hour < ranges.morning[1]) {
-    activeBgIndex.value = 0
+    index = 0
   } else if (hour >= ranges.noon[0] && hour < ranges.noon[1]) {
-    activeBgIndex.value = 1
+    index = 1
   } else if (hour >= ranges.evening[0] && hour < ranges.evening[1]) {
-    activeBgIndex.value = 2
-  } else {
-    activeBgIndex.value = 3
+    index = 2
   }
+  activeBgIndex.value = Math.min(index, backgrounds.value.length - 1)
 }
 
 // 轮换模式：切换到下一张背景
@@ -255,6 +259,16 @@ onUnmounted(() => {
   min-height: 100vh;
 }
 
+.bg-fade-enter-active,
+.bg-fade-leave-active {
+  transition: opacity 1.5s ease-in-out;
+}
+
+.bg-fade-enter-from,
+.bg-fade-leave-to {
+  opacity: 0;
+}
+
 .custom-cursor {
   position: fixed;
   top: 0;
@@ -263,7 +277,6 @@ onUnmounted(() => {
   height: 32px;
   pointer-events: none;
   z-index: 99999;
-  transform: translate(-50%, -50%);
   background-image: url('/images/cursor.png');
   background-size: 32px 32px;
   background-repeat: no-repeat;

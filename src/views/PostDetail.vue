@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import HeroHeader from '../components/HeroHeader.vue'
@@ -82,17 +82,23 @@ const tocItems = computed<TocItem[]>(() => {
 
 async function loadPost() {
   const slug = route.params.slug as string
+  post.value = null
+  renderedHtml.value = ''
   loading.value = true
   try {
     const { data } = await axios.get(`/api/posts/${slug}`)
+    if (route.params.slug !== slug) return
     post.value = data
 
     // 渲染 Markdown
     if (data.content) {
       const renderRes = await axios.post('/api/md/render', { markdown: data.content })
-      renderedHtml.value = renderRes.data.html || renderRes.data
+      if (route.params.slug !== slug) return
+      const html = renderRes.data.html || renderRes.data
+      renderedHtml.value = html.replace(/<img\b/gi, '<img loading="lazy" decoding="async"')
 
       // 渲染完成后给 heading 补 id（用于 TOC 跳转）
+      await nextTick()
       requestAnimationFrame(() => {
         document.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4').forEach((h) => {
           const text = h.textContent || ''
@@ -104,14 +110,15 @@ async function loadPost() {
       })
     }
   } catch (e) {
+    if (route.params.slug !== slug) return
     console.error('Failed to load post:', e)
     post.value = null
   } finally {
-    loading.value = false
+    if (route.params.slug === slug) loading.value = false
   }
 }
 
-onMounted(loadPost)
+watch(() => route.params.slug, () => loadPost(), { immediate: true })
 </script>
 
 <style scoped>

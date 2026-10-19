@@ -10,7 +10,7 @@
         class="friends__card"
       >
         <div class="friends__card-inner">
-          <img :src="friend.avatar" :alt="friend.name" class="friends__avatar" />
+          <img :src="friend.avatar" :alt="friend.name" class="friends__avatar" loading="lazy" decoding="async" />
           <div class="friends__info">
             <h3 class="friends__name">{{ friend.name }}</h3>
             <p class="friends__desc">{{ friend.desc }}</p>

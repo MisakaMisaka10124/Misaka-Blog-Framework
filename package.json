@@ -25,6 +25,7 @@
     "marked-highlight": "^2.2.4",
     "multer": "^2.1.1",
     "open": "^11.0.0",
+    "sharp": "^0.34.5",
     "svg-captcha": "^1.4.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

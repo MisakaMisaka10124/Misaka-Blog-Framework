@@ -60,7 +60,6 @@ img {
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 1.5s ease-in-out;
 }
 
 .bg-system__image.active {

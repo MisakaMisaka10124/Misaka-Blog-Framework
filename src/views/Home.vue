@@ -40,14 +40,16 @@
       </aside>
 
       <!-- 右栏：博客文章 -->
-      <section class="home__posts" v-if="posts.length">
+      <section class="home__posts" v-if="loading || loadError || posts.length">
         <h2 class="home__section-title">最新文章</h2>
-        <div class="home__posts-list">
+        <div v-if="loading" class="home__status">加载中...</div>
+        <div v-else-if="loadError" class="home__status">文章加载失败，请稍后重试</div>
+        <div v-else class="home__posts-list">
           <PostCard v-for="post in pagedPosts" :key="post.slug" :post="post" />
         </div>
 
         <!-- 翻页 -->
-        <div class="home__pagination" v-if="totalPages > 1">
+        <div class="home__pagination" v-if="!loading && !loadError && totalPages > 1">
           <button class="home__page-btn" :disabled="currentPage === 1" @click="currentPage--">上一页</button>
           <template v-for="p in pageNumbers" :key="p">
             <span v-if="p === '...'" class="home__page-dots">...</span>
@@ -80,6 +82,8 @@ const config = ref<SiteConfig>({
 })
 
 const posts = ref<PostMeta[]>([])
+const loading = ref(true)
+const loadError = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(5)
 const defaultAvatar = ref('/images/avatars/avatar1.jpg')
@@ -113,8 +117,8 @@ const pageNumbers = computed(() => {
 async function loadData() {
   try {
     const [configRes, indexRes] = await Promise.all([
-      axios.get('/api/config'),
-      axios.get('/api/posts/index').catch(() => ({ data: { posts: [] } })),
+      axios.get('/api/config').catch(() => ({ data: config.value })),
+      axios.get('/api/posts/index'),
     ])
     config.value = configRes.data
     posts.value = indexRes.data.posts || []
@@ -135,6 +139,9 @@ async function loadData() {
     }
   } catch (e) {
     console.warn('Failed to load data:', e)
+    loadError.value = true
+  } finally {
+    loading.value = false
   }
 }
 
@@ -203,6 +210,12 @@ onMounted(loadData)
   font-size: 0.9em;
   line-height: 1.6;
   text-indent: 2em;
+}
+
+.home__status {
+  color: var(--color-text-muted);
+  padding: var(--space-xl);
+  text-align: center;
 }
 
 /* 入口链接：居中均分 */

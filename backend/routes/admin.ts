@@ -3,8 +3,10 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { verifyToken } from '../middleware/auth';
+import { compressUploadedImage } from '../utils/image_compression';
 
 const router = Router();
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 // 所有 admin 路由都需要认证
 router.use(verifyToken);
@@ -13,7 +15,7 @@ const configPath = path.join(__dirname, '../data/config/core_server_config.json'
 const getConfig = () => JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
 // 图片目录正则
-const IMAGE_RE = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+const IMAGE_RE = /\.(jpg|jpeg|png|gif|webp|svg|avif|tif|tiff|bmp)$/i;
 
 // 配置 Multer 存储
 const storage = multer.diskStorage({
@@ -67,9 +69,26 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
+    fileSize: MAX_UPLOAD_BYTES
   }
 });
+
+function handleImageUpload(req: any, res: any, next: any) {
+  upload.single('image')(req, res, (error: any) => {
+    if (error) {
+      const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      const message = status === 413 ? '上传图片不能超过 50 MB' : error.message;
+      return res.status(status).json({ error: message });
+    }
+    if (!req.file) return next();
+    compressUploadedImage(req.file)
+      .then(next)
+      .catch((compressionError: Error) => {
+        fs.rmSync(req.file.path, { force: true });
+        res.status(400).json({ error: compressionError.message || '图片压缩失败' });
+      });
+  });
+}
 
 /** 获取语言配置文件路径 */
 function getLangConfigPath(lang?: string): string {
@@ -306,7 +325,7 @@ router.put('/config/batch', (req, res) => {
  *       401:
  *         description: 未授权
  */
-router.post('/upload/:type', upload.single('image'), (req: any, res) => {
+router.post('/upload/:type', handleImageUpload, (req: any, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: '没有上传文件' });

@@ -31,6 +31,7 @@
       <div class="search__list" v-if="results.length">
         <PostCard v-for="post in pagedResults" :key="post.slug" :post="post" />
       </div>
+      <p v-else class="search__empty">没有匹配的文章</p>
       <div class="search__pagination" v-if="totalPages > 1">
         <button class="search__page-btn" :disabled="currentPage === 1" @click="currentPage--">上一页</button>
         <template v-for="p in pageNumbers" :key="p">
@@ -39,7 +40,6 @@
         </template>
         <button class="search__page-btn" :disabled="currentPage === totalPages" @click="currentPage++">下一页</button>
       </div>
-      <p v-else class="search__empty">没有匹配的文章</p>
     </div>
   </div>
 </template>
@@ -74,6 +74,7 @@ const pageNumbers = computed(() => {
 })
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
+let searchRequestId = 0
 
 function debouncedSearch() {
   if (searchTimeout) clearTimeout(searchTimeout)
@@ -81,6 +82,7 @@ function debouncedSearch() {
 }
 
 async function doSearch() {
+  const requestId = ++searchRequestId
   const params: Record<string, string> = {}
   if (query.value.trim()) params.q = query.value.trim()
   if (selectedTag.value) params.tag = selectedTag.value
@@ -93,11 +95,12 @@ async function doSearch() {
 
   try {
     const { data } = await axios.get('/api/posts/search', { params })
+    if (requestId !== searchRequestId) return
     results.value = data.posts || []
     searched.value = true
     currentPage.value = 1
   } catch (e) {
-    console.warn('Search failed:', e)
+    if (requestId === searchRequestId) console.warn('Search failed:', e)
   }
 }
 

@@ -1,7 +1,7 @@
 <template>
   <router-link :to="`/post/${post.slug}`" class="post-card backdrop-blur">
     <div v-if="post.cover" class="post-card__cover">
-      <img :src="post.cover" :alt="post.title" />
+      <img :src="post.cover" :alt="post.title" loading="lazy" decoding="async" />
     </div>
     <div class="post-card__body">
       <h3 class="post-card__title">{{ post.title }}</h3>

@@ -8,15 +8,17 @@ import { updatePostStats, updateTagStats } from '../services/site_stats';
 import { generateSlug } from '../utils/slug';
 import { verifyToken } from '../middleware/auth';
 import { createDataLimiter } from '../utils/rate_limit';
+import { compressUploadedImage } from '../utils/image_compression';
 
 const dataLimiter = createDataLimiter();
 
 const router = Router();
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const configPath = path.join(__dirname, '../data/config/core_server_config.json');
 const getConfig = () => JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
 // 图片目录正则
-const IMAGE_RE = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+const IMAGE_RE = /\.(jpg|jpeg|png|gif|webp|svg|avif|tif|tiff|bmp)$/i;
 
 // 配置 Multer 存储（图片按 slug 分目录）
 const storage = multer.diskStorage({
@@ -42,7 +44,29 @@ const storage = multer.diskStorage({
     cb(null, name);
   }
 });
-const upload = multer({ storage, defParamCharset: 'utf8' });
+const upload = multer({ storage, defParamCharset: 'utf8', limits: { fileSize: MAX_UPLOAD_BYTES } });
+const imageUpload = multer({
+  storage,
+  defParamCharset: 'utf8',
+  limits: { fileSize: MAX_UPLOAD_BYTES },
+});
+
+function handleImageUpload(req: any, res: any, next: any) {
+  imageUpload.single('image')(req, res, (error: any) => {
+    if (error) {
+      const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      const message = status === 413 ? '上传图片不能超过 50 MB' : error.message;
+      return res.status(status).json({ error: message });
+    }
+    if (!req.file) return next();
+    compressUploadedImage(req.file)
+      .then(next)
+      .catch((compressionError: Error) => {
+        fs.rmSync(req.file.path, { force: true });
+        res.status(400).json({ error: compressionError.message || '图片压缩失败' });
+      });
+  });
+}
 
 /** 将图片从临时目录移动到 slug 目录 */
 function moveImageToSlugDir(tempPath: string, slug: string, filename: string, monthDir?: string): string {
@@ -131,12 +155,22 @@ function writeFrontmatterField(slug: string, field: string, value: string, month
 router.post('/upload', verifyToken, upload.fields([
   { name: 'file', maxCount: 1 },
   { name: 'cover', maxCount: 1 }
-]), (req: any, res) => {
+]), async (req: any, res) => {
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
   if (!files?.file?.[0]) return res.status(400).json({ error: '没有 Markdown 文件上传' });
 
   const mdFile = files.file[0];
   const coverFile = files.cover?.[0];
+  if (coverFile) {
+    try {
+      await compressUploadedImage(coverFile);
+    } catch (error: any) {
+      for (const uploadedFiles of Object.values(files)) {
+        for (const file of uploadedFiles) fs.rmSync(file.path, { force: true });
+      }
+      return res.status(400).json({ error: error.message || '封面图片压缩失败' });
+    }
+  }
 
   // 自动生成哈希 slug
   const slug = generateSlug(mdFile.originalname);
@@ -162,14 +196,16 @@ router.post('/upload', verifyToken, upload.fields([
     const tempFiles = fs.readdirSync(tempDir);
     for (const f of tempFiles) {
       const tempPath = path.join(tempDir, f);
-      if (fs.statSync(tempPath).isFile()) {
+      if (fs.statSync(tempPath).isFile() && mdContent.includes(`/images/posts/images/_temp/${f}`)) {
         const newUrl = moveImageToSlugDir(tempPath, slug, f, monthDir);
         // 替换 md 内容中的 _temp URL 为真实 slug URL
         mdContent = mdContent.replace(`/images/posts/images/_temp/${f}`, newUrl);
       }
     }
     fs.writeFileSync(newMdPath, mdContent, 'utf-8');
-    try { fs.rmdirSync(tempDir); } catch {}
+    if (fs.readdirSync(tempDir).length === 0) {
+      try { fs.rmdirSync(tempDir); } catch {}
+    }
   }
 
   // 处理标签（从表单和 frontmatter 两处获取，取并集）
@@ -224,7 +260,7 @@ router.post('/upload', verifyToken, upload.fields([
  *       401:
  *         description: 无权访问
  */
-router.post('/upload-image', verifyToken, upload.single('image'), (req: any, res) => {
+router.post('/upload-image', verifyToken, handleImageUpload, (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: '没有图片文件' });
   const slug = req.body.slug || '_temp';
   if (slug === '_temp') {
@@ -496,9 +532,18 @@ router.put('/:slug', verifyToken, (req: any, res, next) => {
   } else {
     next();
   }
-}, (req: any, res) => {
+}, async (req: any, res) => {
   const { slug } = req.params;
   const content = req.body.content;
+
+  if (req.file) {
+    try {
+      await compressUploadedImage(req.file);
+    } catch (error: any) {
+      fs.rmSync(req.file.path, { force: true });
+      return res.status(400).json({ error: error.message || '封面图片压缩失败' });
+    }
+  }
 
   if (!content) return res.status(400).json({ error: '内容不能为空' });
 

@@ -163,6 +163,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import GlassCard from '../components/GlassCard.vue'
+import { compressImage as compressRasterImage } from '../composables/compressImage'
 
 const router = useRouter()
 
@@ -396,30 +397,13 @@ function insertMd(before: string, after: string) {
 function insertTab() { insertMd('  ', '') }
 
 // 图片压缩配置
-const imageCompressionMaxWidth = ref(1920)
-const imageCompressionQuality = ref(0.82)
+const imageCompressionMaxWidth = ref(1440)
+const imageCompressionQuality = ref(0.72)
 
 async function compressImage(file: File): Promise<File> {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')!
-        const maxWidth = imageCompressionMaxWidth.value
-        let { width, height } = img
-        if (width > maxWidth) { height = Math.round((height / width) * maxWidth); width = maxWidth }
-        canvas.width = width; canvas.height = height
-        ctx.drawImage(img, 0, 0, width, height)
-        canvas.toBlob(
-          (blob) => resolve(blob ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }) : file),
-          'image/jpeg', imageCompressionQuality.value,
-        )
-      }
-      img.src = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
+  return compressRasterImage(file, {
+    maxDimension: imageCompressionMaxWidth.value,
+    quality: imageCompressionQuality.value,
   })
 }
 

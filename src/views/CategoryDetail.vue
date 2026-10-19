@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import PostCard from '../components/PostCard.vue'
@@ -25,19 +25,25 @@ const route = useRoute()
 const tag = ref(route.params.tag as string)
 const posts = ref<PostMeta[]>([])
 const loading = ref(true)
+let loadRequestId = 0
 
-async function loadPosts() {
+async function loadPosts(nextTag = route.params.tag as string) {
+  const requestId = ++loadRequestId
+  tag.value = nextTag
+  posts.value = []
+  loading.value = true
   try {
-    const { data } = await axios.get(`/api/tags/${tag.value}`)
+    const { data } = await axios.get(`/api/tags/${encodeURIComponent(tag.value)}`)
+    if (requestId !== loadRequestId) return
     posts.value = data.posts || []
   } catch (e) {
-    console.warn('Failed to load tag posts:', e)
+    if (requestId === loadRequestId) console.warn('Failed to load tag posts:', e)
   } finally {
-    loading.value = false
+    if (requestId === loadRequestId) loading.value = false
   }
 }
 
-onMounted(loadPosts)
+watch(() => route.params.tag, (nextTag) => loadPosts(nextTag as string), { immediate: true })
 </script>
 
 <style scoped>

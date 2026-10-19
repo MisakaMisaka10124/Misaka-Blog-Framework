@@ -234,7 +234,7 @@
             </button>
           </div>
           <span class="admin-settings__field-hint">
-            建议使用 1920x1080 以上的图片，支持 jpg/png/webp 格式，可输入网络URL或本地上传
+            可直接上传高清原图，系统会自动压缩到 1 MB 以下；支持 jpg/png/webp，也可填写网络图片 URL
           </span>
         </div>
       </div>
@@ -271,7 +271,7 @@
         <button
           type="submit"
           class="admin-settings__save-btn"
-          :disabled="saving"
+          :disabled="saving || imageProcessing"
         >
           {{ saving ? '保存中...' : '保存设置' }}
         </button>
@@ -290,6 +290,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { compressImage } from '../../composables/compressImage'
 
 // 表单数据
 const siteTitle = ref('')
@@ -315,6 +316,7 @@ const rotationInterval = ref(300)
 // UI 状态
 const loading = ref(true)
 const saving = ref(false)
+const imageProcessing = ref(false)
 const error = ref('')
 const success = ref('')
 
@@ -363,16 +365,25 @@ async function loadSettings() {
 }
 
 // 头像上传
-function handleAvatarSelect(e: Event) {
+async function handleAvatarSelect(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) {
-    avatarFile.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      avatarPreview.value = e.target?.result as string
+    imageProcessing.value = true
+    error.value = ''
+    try {
+      avatarFile.value = await compressImage(file)
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        avatarPreview.value = event.target?.result as string
+      }
+      reader.readAsDataURL(avatarFile.value)
+    } catch (err: any) {
+      error.value = '头像压缩失败: ' + err.message
+    } finally {
+      imageProcessing.value = false
     }
-    reader.readAsDataURL(file)
   }
+  ;(e.target as HTMLInputElement).value = ''
 }
 
 // 背景图片管理
@@ -390,14 +401,18 @@ async function handleBgSelect(e: Event, index: number) {
   if (!file) return
 
   try {
+    imageProcessing.value = true
     const formData = new FormData()
-    formData.append('image', file)
+    formData.append('image', await compressImage(file))
     const { data } = await axios.post('/api/admin/upload/background', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     heroBackgrounds.value[index] = data.url
   } catch (err: any) {
     error.value = '背景图片上传失败: ' + (err.response?.data?.error || err.message)
+  } finally {
+    imageProcessing.value = false
+    ;(e.target as HTMLInputElement).value = ''
   }
 }
 
@@ -406,14 +421,18 @@ async function handleStaticBgSelect(e: Event) {
   if (!file) return
 
   try {
+    imageProcessing.value = true
     const formData = new FormData()
-    formData.append('image', file)
+    formData.append('image', await compressImage(file))
     const { data } = await axios.post('/api/admin/upload/background', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     staticBackground.value = data.url
   } catch (err: any) {
     error.value = '背景图片上传失败: ' + (err.response?.data?.error || err.message)
+  } finally {
+    imageProcessing.value = false
+    ;(e.target as HTMLInputElement).value = ''
   }
 }
 

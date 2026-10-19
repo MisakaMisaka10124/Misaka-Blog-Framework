@@ -146,7 +146,7 @@
               <button
                 type="submit"
                 class="admin-friends__dialog-btn admin-friends__dialog-btn--confirm"
-                :disabled="saving"
+                :disabled="saving || avatarUploading"
               >
                 {{ saving ? '保存中...' : '保存' }}
               </button>
@@ -195,6 +195,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { compressImage } from '../../composables/compressImage'
 
 interface FriendLink {
   name: string
@@ -208,6 +209,7 @@ const showAddDialog = ref(false)
 const editingIndex = ref<number | null>(null)
 const deletingIndex = ref<number | null>(null)
 const saving = ref(false)
+const avatarUploading = ref(false)
 const error = ref('')
 const success = ref('')
 const defaultFriendAvatar = ref('/images/avatars/avatar1.jpg')
@@ -233,30 +235,32 @@ async function loadFriends() {
 }
 
 // 头像上传
-function handleAvatarSelect(e: Event) {
+async function handleAvatarSelect(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      avatarPreview.value = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
+    avatarUploading.value = true
+    error.value = ''
+    try {
+      const compressed = await compressImage(file)
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        avatarPreview.value = event.target?.result as string
+      }
+      reader.readAsDataURL(compressed)
 
-    // 上传文件
-    const formDataObj = new FormData()
-    formDataObj.append('image', file)
-    axios
-      .post('/api/admin/upload/friends', formDataObj, {
+      const formDataObj = new FormData()
+      formDataObj.append('image', compressed)
+      const { data } = await axios.post('/api/admin/upload/friends', formDataObj, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      .then(({ data }) => {
-        formData.value.avatar = data.url
-      })
-      .catch((err) => {
-        error.value = '头像上传失败'
-        console.error(err)
-      })
+      formData.value.avatar = data.url
+    } catch (err: any) {
+      error.value = '头像上传失败: ' + (err.response?.data?.error || err.message)
+    } finally {
+      avatarUploading.value = false
+    }
   }
+  ;(e.target as HTMLInputElement).value = ''
 }
 
 // 编辑友链
