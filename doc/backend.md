@@ -29,6 +29,7 @@ backend/
 │   └── auth.ts             # JWT 认证中间件
 ├── utils/                  # 工具函数
 │   ├── slug.ts             # 哈希 slug 生成器
+│   ├── image_compression.ts # 上传图片服务端压缩
 │   ├── md_html.ts          # Markdown 渲染器
 │   ├── rate_limit.ts       # 通用限流中间件
 │   └── verify.ts           # 验证码生成
@@ -145,9 +146,12 @@ export function verifyToken(req, res, next) {
 ### 7. 图片管理
 
 **核心函数**:
+- `compressUploadedImage(file)`: 使用 Sharp 将常规栅格图片压缩为 JPEG，目标小于 1 MB；必要时缩小尺寸
 - `moveImageToSlugDir(tempPath, slug, filename)`: 移动图片到 slug 目录
 - `removeImageDir(slug)`: 删除 slug 对应的图片目录
 - `writeFrontmatterField(slug, field, value)`: 写入 frontmatter 字段
+
+图片上传接口允许单张原图最大 50 MB。前端压缩用于减少上传流量，服务端压缩作为兜底；超过限制时接口返回 413。小于 1 MB 的 GIF 保留原文件，较大的 GIF 转为 JPEG（不保留动画），SVG 不经过栅格压缩。
 
 ## API 路由
 
