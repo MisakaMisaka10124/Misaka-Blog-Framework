@@ -8,12 +8,28 @@ const getConfig = () => JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
 const INDEX_PATH = () => path.join(__dirname, '../data/posts/post_index.json');
 const POSTS_DIR = () => path.join(__dirname, '../', getConfig().paths.posts_dir);
+let cachedIndex: PostIndex | null = null;
+let cachedIndexFingerprint = '';
+
+function indexFingerprint(indexPath: string): string {
+  const stat = fs.statSync(indexPath);
+  return `${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+}
+
+function writeIndex(index: PostIndex): void {
+  const indexPath = INDEX_PATH();
+  const dir = path.dirname(indexPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(indexPath, JSON.stringify(index, null, 2), 'utf-8');
+  cachedIndex = index;
+  cachedIndexFingerprint = indexFingerprint(indexPath);
+}
 
 /** 根据日期获取月份目录名 (YYYY-MM) */
 export function getMonthDir(dateStr: string): string {
   const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
 }
 
@@ -132,10 +148,7 @@ export function buildIndex(): PostIndex {
     lastUpdated: new Date().toISOString(),
   };
 
-  const indexPath = INDEX_PATH();
-  const dir = path.dirname(indexPath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(indexPath, JSON.stringify(index, null, 2), 'utf-8');
+  writeIndex(index);
   return index;
 }
 
@@ -143,7 +156,11 @@ export function buildIndex(): PostIndex {
 export function readIndex(): PostIndex {
   const indexPath = INDEX_PATH();
   if (fs.existsSync(indexPath)) {
-    return JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+    const fingerprint = indexFingerprint(indexPath);
+    if (cachedIndex && cachedIndexFingerprint === fingerprint) return cachedIndex;
+    cachedIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+    cachedIndexFingerprint = fingerprint;
+    return cachedIndex!;
   }
   return buildIndex();
 }
@@ -192,7 +209,7 @@ export function addOrUpdatePost(slug: string): PostMeta | null {
 
   index.lastUpdated = new Date().toISOString();
 
-  fs.writeFileSync(INDEX_PATH(), JSON.stringify(index, null, 2), 'utf-8');
+  writeIndex(index);
   return meta;
 }
 
@@ -204,7 +221,7 @@ export function removePost(slug: string): boolean {
 
   index.posts = index.posts.filter(p => p.slug !== slug);
   index.lastUpdated = new Date().toISOString();
-  fs.writeFileSync(INDEX_PATH(), JSON.stringify(index, null, 2), 'utf-8');
+  writeIndex(index);
 
   // 从正确的月份目录删除 md 文件（按日期目录找不到时扫描所有月份目录）
   const postsDir = POSTS_DIR();

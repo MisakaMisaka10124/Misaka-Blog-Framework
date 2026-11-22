@@ -1,10 +1,7 @@
 import { Router } from 'express';
-import fs from 'fs';
-import path from 'path';
 import { renderMarkdown } from '../utils/md_html';
 
 const router = Router();
-const configPath = path.join(__dirname, '../data/config/core_server_config.json');
 
 /**
  * @openapi

@@ -1,7 +1,7 @@
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import matter from 'gray-matter';
-import hljs from 'highlight.js';
+import hljs from 'highlight.js/lib/common';
 
 const marked = new Marked(
     markedHighlight({

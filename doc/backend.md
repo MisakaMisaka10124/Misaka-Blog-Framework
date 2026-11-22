@@ -37,8 +37,6 @@ backend/
 └── data/                   # 数据目录（所有可编辑内容）
     ├── config/             # 配置文件
     │   ├── core_server_config.json
-    │   ├── post_index.json       # 文章索引（自动生成）
-    │   └── tags/                 # 标签索引目录（自动生成）
     ├── langrage/           # 多语言站点配置
     ├── images/             # 可修改图片
     │   ├── avatars/        # 头像
@@ -47,7 +45,9 @@ backend/
     │   ├── social/         # 社交图标 SVG
     │   └── uploads/        # 通用上传
     └── posts/              # 文章存储
-        ├── *.md            # Markdown 文件
+        ├── post_index.json # 文章索引（自动生成）
+        ├── YYYY-MM/*.md    # 按月份存放的 Markdown 文件
+        ├── tags/            # 标签索引（自动生成）
         └── images/         # 文章图片（按 slug 分目录）
 ```
 
@@ -96,13 +96,13 @@ interface PostMeta {
 **核心函数**:
 - `scanPosts()`: 扫描所有 .md 文件，提取元数据，按日期降序 + 文件修改时间降序排列
 - `buildIndex()`: 构建全局索引并写入 JSON
-- `readIndex()`: 读取现有索引（不存在则构建）
+- `readIndex()`: 从内存缓存读取索引；文件变化时重新加载，不存在则构建
 - `addOrUpdatePost(slug)`: 增量更新单篇文章（同日期按 mtime 排序）
 - `removePost(slug)`: 从索引中移除文章
 
 ### 3. 标签系统 (tag.ts)
 
-每个标签一个 JSON 文件，存储在 `data/config/tags/` 目录。
+每个标签一个 JSON 文件，存储在 `data/posts/tags/` 目录。
 
 **核心函数**:
 - `syncTagsForPost(slug, newTags, oldTags)`: 增量同步标签
@@ -194,7 +194,7 @@ export function verifyToken(req, res, next) {
 
 ### GET /api/posts/:slug
 
-返回指定文章的 Markdown 原文和元数据。
+返回指定文章的 Markdown 原文和元数据。添加 `?render=1` 时只返回渲染后的 HTML 和元数据，减少文章详情页的请求往返与响应体积。
 
 ### GET /api/tags
 
@@ -233,11 +233,11 @@ export function verifyToken(req, res, next) {
 
 ### POST /api/md/render
 
-将 Markdown 渲染为 HTML（支持代码高亮）。
+将 Markdown 渲染为 HTML（使用 highlight.js 常用语言集合进行代码高亮）。
 
-### GET /api/visitor/stats
+### GET /api/visitor/record
 
-记录访问并返回站点统计。
+记录访问并返回访客信息和站点统计。
 
 - 优先从 `cf-connecting-ip` 头获取真实客户端 IP（兼容 Cloudflare CDN），回退至 `req.ip`
 - 记录当前 IP（同一天同一 IP 只计一次）
@@ -245,6 +245,14 @@ export function verifyToken(req, res, next) {
 - 统计今日更新文章数（从索引 date 字段）
 - 返回: `{ ip, countryCode, todayVisitors, totalVisitors, todayPosts }`
 - 限流: 受 `rate_limit.data_api` 配置约束
+
+### GET /api/visitor/stats
+
+只读返回今日和累计访客数，不记录新的访问。
+
+### GET /api/visitor/site-stats
+
+返回后台仪表盘使用的完整预计算统计数据。
 
 ## 认证机制
 

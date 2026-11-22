@@ -6,7 +6,7 @@
         <GlassCard class="home__profile-card">
           <!-- 头像居中 -->
           <div class="home__profile-header">
-            <img :src="defaultAvatar" alt="avatar" class="home__avatar" />
+            <img :src="defaultAvatar" alt="avatar" class="home__avatar" decoding="async" />
             <h2 class="home__profile-name">{{ config.siteTitle || 'Misaka10124' }}</h2>
             <p class="home__profile-tagline">{{ config.hero?.subtitle || config.welcomeMessage }}</p>
           </div>
@@ -116,26 +116,21 @@ const pageNumbers = computed(() => {
 
 async function loadData() {
   try {
-    const [configRes, indexRes] = await Promise.all([
-      axios.get('/api/config').catch(() => ({ data: config.value })),
+    const lang = localStorage.getItem('site_lang') || 'zh_cn'
+    const [configRes, indexRes, serverConfigRes] = await Promise.all([
+      axios.get(`/api/config?lang=${encodeURIComponent(lang)}`).catch(() => ({ data: config.value })),
       axios.get('/api/posts/index'),
+      axios.get('/api/server-config').catch(() => ({ data: {} })),
     ])
     config.value = configRes.data
     posts.value = indexRes.data.posts || []
 
     // 从服务器配置获取分页大小和默认头像
-    try {
-      const serverConfigRes = await axios.get('/api/server-config')
-      if (serverConfigRes.data.display?.homePostsPerPage) {
-        pageSize.value = serverConfigRes.data.display.homePostsPerPage
-      }
-      if (serverConfigRes.data.defaults?.avatar) {
-        // 加时间戳防止浏览器缓存旧头像
-        const avatar = serverConfigRes.data.defaults.avatar
-        defaultAvatar.value = avatar.includes('?') ? avatar : `${avatar}?t=${Date.now()}`
-      }
-    } catch {
-      // 使用默认值
+    if (serverConfigRes.data.display?.homePostsPerPage) {
+      pageSize.value = serverConfigRes.data.display.homePostsPerPage
+    }
+    if (serverConfigRes.data.defaults?.avatar) {
+      defaultAvatar.value = serverConfigRes.data.defaults.avatar
     }
   } catch (e) {
     console.warn('Failed to load data:', e)

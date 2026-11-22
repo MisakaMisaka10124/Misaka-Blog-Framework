@@ -33,7 +33,7 @@ router.get('/record', dataLimiter, async (req, res) => {
     const countryCode = await getCountryCode(ip);
 
     // 同步更新 site_stats.json
-    updateVisitorStats(counts.todayCount, counts.totalCount);
+    if (counts.changed) updateVisitorStats(counts.todayCount, counts.totalCount);
 
     // 统计今日更新的文章数
     const today = new Date().toISOString().split('T')[0];

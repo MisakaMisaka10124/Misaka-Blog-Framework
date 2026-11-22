@@ -152,23 +152,26 @@ function updateBackground() {
   }
 }
 
-// 自定义光标
-const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+// 根据实际输入设备显示自定义光标，兼容带触屏的电脑。
+function handlePointerMove(e: PointerEvent) {
+  const cursor = cursorRef.value
+  if (!cursor) return
 
-function handleMouseMove(e: MouseEvent) {
-  if (cursorRef.value) {
-    cursorRef.value.style.left = `${e.clientX}px`
-    cursorRef.value.style.top = `${e.clientY}px`
-    cursorRef.value.style.display = 'block'
+  const isMousePointer = e.pointerType === 'mouse'
+  cursor.parentElement?.classList.toggle('has-mouse-pointer', isMousePointer)
+
+  if (!isMousePointer) {
+    cursor.style.display = 'none'
+    return
   }
+
+  cursor.style.left = `${e.clientX}px`
+  cursor.style.top = `${e.clientY}px`
+  cursor.style.display = 'block'
 }
 
-function handleMouseLeave() {
+function handlePointerLeave() {
   if (cursorRef.value) cursorRef.value.style.display = 'none'
-}
-
-function handleMouseEnter() {
-  if (cursorRef.value) cursorRef.value.style.display = 'block'
 }
 
 // 加载配置
@@ -236,19 +239,16 @@ onMounted(() => {
     }
   })
 
-  // 桌面端自定义光标
-  if (!isTouchDevice && window.matchMedia('(pointer: fine)').matches) {
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseleave', handleMouseLeave)
-    document.addEventListener('mouseenter', handleMouseEnter)
-  }
+  // 按实际的鼠标事件启用自定义光标；设备触屏能力和主指针媒体查询
+  // 无法可靠判断电脑上是否正在使用鼠标。
+  document.addEventListener('pointermove', handlePointerMove)
+  document.addEventListener('pointerleave', handlePointerLeave)
 })
 
 onUnmounted(() => {
   clearInterval(bgInterval)
-  document.removeEventListener('mousemove', handleMouseMove)
-  document.removeEventListener('mouseleave', handleMouseLeave)
-  document.removeEventListener('mouseenter', handleMouseEnter)
+  document.removeEventListener('pointermove', handlePointerMove)
+  document.removeEventListener('pointerleave', handlePointerLeave)
 })
 </script>
 
@@ -283,13 +283,8 @@ onUnmounted(() => {
   display: none;
 }
 
-@media (pointer: fine) {
-  .app-layout * {
-    cursor: none !important;
-  }
-  .custom-cursor {
-    display: block;
-  }
+.app-layout.has-mouse-pointer * {
+  cursor: none !important;
 }
 </style>
 

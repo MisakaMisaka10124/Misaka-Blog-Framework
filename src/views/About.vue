@@ -14,7 +14,7 @@
         <span class="about__visitor-sep">|</span>
         <span>今日有{{ visitor.todayVisitors }}人访问</span>
         <span class="about__visitor-sep">|</span>
-        <span>您的IP为：<span :class="`fi fi-${visitor.countryCode.toLowerCase()}`"></span> <code class="about__ip">{{ visitor.ip }}</code></span>
+        <span>您的IP为：<span class="about__flag" role="img" :aria-label="visitor.countryCode">{{ countryFlag(visitor.countryCode) }}</span> <code class="about__ip">{{ visitor.ip }}</code></span>
       </div>
     </GlassCard>
   </div>
@@ -29,22 +29,28 @@ import GlassCard from '../components/GlassCard.vue'
 const content = ref('')
 const visitor = ref<{ ip: string; countryCode: string; todayVisitors: number; totalVisitors: number; todayPosts: number } | null>(null)
 
-onMounted(async () => {
-  try {
-    const { data } = await axios.get('/api/config')
-    const rawContent = data.aboutContent || data.about || ''
-    content.value = marked(rawContent) as string
-  } catch {
-    // 静默失败，使用默认内容
-    content.value = '<h2>Hi there</h2><p>欢迎来到我的个人空间。</p>'
-  }
+function countryFlag(code: string): string {
+  const normalized = code.toUpperCase()
+  if (!/^[A-Z]{2}$/.test(normalized) || normalized === 'UN') return '🌐'
+  return String.fromCodePoint(...Array.from(normalized, char => 127397 + char.charCodeAt(0)))
+}
 
-  try {
-    const { data } = await axios.get('/api/visitor/record')
-    visitor.value = data
-  } catch {
-    // 静默失败，不影响页面
-  }
+onMounted(async () => {
+  const lang = localStorage.getItem('site_lang') || 'zh_cn'
+  const configTask = axios.get(`/api/config?lang=${encodeURIComponent(lang)}`)
+    .then(({ data }) => {
+      const rawContent = data.aboutContent || data.about || ''
+      content.value = marked(rawContent) as string
+    })
+    .catch(() => {
+      // 静默失败，使用默认内容
+      content.value = '<h2>Hi there</h2><p>欢迎来到我的个人空间。</p>'
+    })
+  const visitorTask = axios.get('/api/visitor/record')
+    .then(({ data }) => { visitor.value = data })
+    .catch(() => { /* 统计失败不影响关于页内容 */ })
+
+  await Promise.all([configTask, visitorTask])
 })
 </script>
 
@@ -84,7 +90,7 @@ onMounted(async () => {
   color: var(--color-border);
 }
 
-.about__visitor .fi {
+.about__flag {
   margin-right: 4px;
   vertical-align: middle;
 }

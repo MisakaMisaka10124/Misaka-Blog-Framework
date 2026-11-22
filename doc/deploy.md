@@ -6,7 +6,7 @@
 
 | 依赖 | 最低版本 | 说明 |
 |------|----------|------|
-| **Node.js** | 18+ | 自带 npm |
+| **Node.js** | 18+ | 预构建后端运行最低版本；本地开发/构建需 20.19+ 或 22.12+ |
 
 > curl 和 tar 系统一般自带，脚本会自动检测
 
@@ -234,12 +234,12 @@ sudo ./deploy.sh --mode docker --source github
 1. **下载 Release**
    ```bash
    # 国内服务器（Gitee）
-   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/dist.tar.gz
-   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/backend.tar.gz
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/dist.tar.gz
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/backend.tar.gz
 
    # 海外服务器（GitHub）
-   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/dist.tar.gz
-   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/backend.tar.gz
+   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/dist.tar.gz
+   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/backend.tar.gz
    ```
 
 2. **解压文件**
@@ -270,12 +270,12 @@ sudo ./deploy.sh --mode docker --source github
 1. **下载 Release**
    ```bash
    # 国内服务器（Gitee）
-   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/dist.tar.gz
-   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.1/backend.tar.gz
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/dist.tar.gz
+   wget https://gitee.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/backend.tar.gz
 
    # 海外服务器（GitHub）
-   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/dist.tar.gz
-   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/latest/download/backend.tar.gz
+   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/dist.tar.gz
+   wget https://github.com/MisakaMisaka10124/Misaka-Blog-Framework/releases/download/v1.3.5/backend.tar.gz
    ```
 
 2. **解压文件**
@@ -546,27 +546,13 @@ docker compose up -d --build
 
 ## 发布新版本
 
-### 自动构建（推荐）
+### Release 流程
 
-1. 在 GitHub 上创建新的 Release
-2. 创建 tag（格式：`v1.0.0`）
-3. GitHub Actions 会自动构建并发布 `dist.tar.gz` 和 `backend.tar.gz`
-
-### 手动构建
-
-```bash
-# 1. 更新 package.json 中的版本号
-npm version patch  # 或 minor, major
-
-# 2. 构建前端
-npm run build
-
-# 3. 打包
-tar -czf dist.tar.gz dist/
-tar -czf backend.tar.gz --exclude='backend/data' backend/ package.json package-lock.json ecosystem.config.js
-
-# 4. 在 GitHub 上创建 Release 并上传文件
-```
+1. 更新 `package.json` 和 `package-lock.json` 的版本号。
+2. 在 `doc/update/` 新增更新日志，并更新 `doc/update/index.md`。
+3. 运行构建和功能检查，提交并推送到 `main`。
+4. 创建并推送 `v主.次.修订` tag，例如 `git tag v1.3.5 && git push origin v1.3.5`。
+5. GitHub Actions 会构建前后端压缩包并创建 GitHub Release；Gitee 同步工作流随后同步代码和 Release 附件。
 
 ## 目录结构
 

@@ -922,6 +922,16 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
 
+    # Vite 输出的文件名包含内容哈希，可长期缓存
+    location ^~ /assets/ {
+        try_files \$uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
     # API 反向代理
     location /api/ {
         proxy_pass http://127.0.0.1:3000;
@@ -932,9 +942,10 @@ server {
     }
 
     # 图片资源代理
-    location /images/ {
+    location ^~ /images/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host \$host;
+        add_header Cache-Control "public, max-age=300, must-revalidate";
     }
 
     # Swagger 文档代理
@@ -943,10 +954,9 @@ server {
         proxy_set_header Host \$host;
     }
 
-    # 静态资源缓存
-    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$ {
-        expires 7d;
-        add_header Cache-Control "public, immutable";
+    # 非哈希静态文件（如 favicon）短期缓存，避免内容更新后长期过期
+    location ~* \.(ico|png|jpg|jpeg|gif|svg|webp|avif|woff|woff2)$ {
+        add_header Cache-Control "public, max-age=300, must-revalidate";
     }
 }
 EOF
@@ -976,6 +986,16 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
 
+    # Vite 输出的文件名包含内容哈希，可长期缓存
+    location ^~ /assets/ {
+        try_files \$uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
     # API 反向代理
     location /api/ {
         proxy_pass http://127.0.0.1:3000;
@@ -986,9 +1006,10 @@ server {
     }
 
     # 图片资源代理
-    location /images/ {
+    location ^~ /images/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host \$host;
+        add_header Cache-Control "public, max-age=300, must-revalidate";
     }
 
     # Swagger 文档代理
@@ -997,10 +1018,9 @@ server {
         proxy_set_header Host \$host;
     }
 
-    # 静态资源缓存
-    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$ {
-        expires 7d;
-        add_header Cache-Control "public, immutable";
+    # 非哈希静态文件（如 favicon）短期缓存，避免内容更新后长期过期
+    location ~* \.(ico|png|jpg|jpeg|gif|svg|webp|avif|woff|woff2)$ {
+        add_header Cache-Control "public, max-age=300, must-revalidate";
     }
 }
 EOF

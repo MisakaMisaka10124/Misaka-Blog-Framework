@@ -36,11 +36,11 @@ npm run dev        # 前端 :5173
 npm run server     # 后端 :3000
 ```
 
-需要 Node.js >= 18。
+本地安装依赖并开发/构建需要 Node.js 20.19+ 或 22.12+（Vite 8 要求）。运行预构建的生产后端需要 Node.js 18+。
 
 ## 功能
 
-文章管理（上传/编辑/删除 Markdown，封面图，标签系统，全文搜索）、后台管理面板、多语言（简/繁/英）、深色/浅色主题、友链、访客统计、自定义光标、API 限流、JWT 认证、Swagger 文档。
+文章管理（上传/编辑/删除 Markdown、封面图、标签系统、按标题/简介/标签搜索）、后台管理面板、多语言（简/繁/英）、深色/浅色主题、友链、访客统计、自定义光标、API 限流、JWT 认证、Swagger 文档。
 
 ## 数据存储
 
@@ -51,7 +51,6 @@ backend/data/
 ├── config/
 │   ├── core_server_config.example.json  # 配置模板
 │   ├── core_server_config.json          # 实际配置（从模板复制，去掉 .example）
-│   └── tags/                            # 标签索引（自动生成）
 ├── langrage/
 │   ├── site_config_{lang}.example.json  # 语言配置模板
 │   └── site_config_{lang}.json          # 实际配置（从模板复制，去掉 .example）
@@ -61,7 +60,9 @@ backend/data/
 │   ├── friends/                         # 友链头像
 │   └── social/                          # 社交图标 SVG
 └── posts/
-    ├── *.md                             # 文章
+    ├── post_index.json                   # 文章索引（自动生成）
+    ├── YYYY-MM/*.md                      # 按月份存放的文章
+    ├── tags/                             # 标签索引（自动生成）
     └── images/                          # 文章图片（按 slug 分目录）
 ```
 

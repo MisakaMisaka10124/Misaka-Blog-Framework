@@ -2,6 +2,23 @@ import fs from 'fs';
 import path from 'path';
 
 const STATS_PATH = () => path.join(__dirname, '../data/config/visitor_stats.json');
+const countryCodeCache = new Map<string, { code: string; expiresAt: number }>();
+const COUNTRY_CODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const COUNTRY_CODE_CACHE_LIMIT = 10_000;
+
+function cacheCountryCode(ip: string, code: string, ttl: number): void {
+  if (countryCodeCache.size >= COUNTRY_CODE_CACHE_LIMIT) {
+    const now = Date.now();
+    for (const [cachedIp, entry] of countryCodeCache) {
+      if (entry.expiresAt <= now) countryCodeCache.delete(cachedIp);
+    }
+    if (countryCodeCache.size >= COUNTRY_CODE_CACHE_LIMIT) {
+      const oldestIp = countryCodeCache.keys().next().value;
+      if (oldestIp) countryCodeCache.delete(oldestIp);
+    }
+  }
+  countryCodeCache.set(ip, { code, expiresAt: Date.now() + ttl });
+}
 
 interface VisitorStats {
   total: number;
@@ -35,18 +52,26 @@ function today(): string {
  * 记录一次访问（同一 IP 同一天只计一次）
  * 返回今日访问数和总访问数
  */
-export function recordVisit(ip: string): { todayCount: number; totalCount: number } {
+export function recordVisit(ip: string): { todayCount: number; totalCount: number; changed: boolean } {
   const stats = readStats();
   const date = today();
+  let changed = false;
 
-  if (!stats.daily[date]) stats.daily[date] = 0;
-  if (!stats.ips[date]) stats.ips[date] = [];
+  if (!stats.daily[date]) {
+    stats.daily[date] = 0;
+    changed = true;
+  }
+  if (!stats.ips[date]) {
+    stats.ips[date] = [];
+    changed = true;
+  }
 
   // 同一 IP 同一天只计一次
   if (!stats.ips[date].includes(ip)) {
     stats.ips[date].push(ip);
     stats.daily[date]++;
     stats.total++;
+    changed = true;
   }
 
   // 清理 30 天前的 ip 记录（节省空间）
@@ -54,11 +79,14 @@ export function recordVisit(ip: string): { todayCount: number; totalCount: numbe
   cutoff.setDate(cutoff.getDate() - 30);
   const cutoffStr = cutoff.toISOString().split('T')[0];
   for (const d of Object.keys(stats.ips)) {
-    if (d < cutoffStr) delete stats.ips[d];
+    if (d < cutoffStr) {
+      delete stats.ips[d];
+      changed = true;
+    }
   }
 
-  writeStats(stats);
-  return { todayCount: stats.daily[date], totalCount: stats.total };
+  if (changed) writeStats(stats);
+  return { todayCount: stats.daily[date], totalCount: stats.total, changed };
 }
 
 /** 获取统计数据（不记录访问） */
@@ -77,13 +105,19 @@ export async function getCountryCode(ip: string): Promise<string> {
   if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') {
     return 'CN';
   }
+  const cached = countryCodeCache.get(ip);
+  if (cached && cached.expiresAt > Date.now()) return cached.code;
+
   try {
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
       signal: AbortSignal.timeout(3000),
     });
     const data = await res.json() as { countryCode?: string };
-    return data.countryCode || 'UN';
+    const code = data.countryCode || 'UN';
+    cacheCountryCode(ip, code, COUNTRY_CODE_CACHE_TTL_MS);
+    return code;
   } catch {
+    cacheCountryCode(ip, 'UN', 60_000);
     return 'UN';
   }
 }

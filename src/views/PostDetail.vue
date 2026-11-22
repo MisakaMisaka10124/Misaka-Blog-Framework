@@ -86,15 +86,18 @@ async function loadPost() {
   renderedHtml.value = ''
   loading.value = true
   try {
-    const { data } = await axios.get(`/api/posts/${slug}`)
+    const { data } = await axios.get(`/api/posts/${encodeURIComponent(slug)}?render=1`)
     if (route.params.slug !== slug) return
     post.value = data
 
-    // 渲染 Markdown
-    if (data.content) {
+    // 新版后端直接返回 HTML；旧版后端仍通过 Markdown 渲染接口回退。
+    let html = data.html
+    if (!html && data.content) {
       const renderRes = await axios.post('/api/md/render', { markdown: data.content })
       if (route.params.slug !== slug) return
-      const html = renderRes.data.html || renderRes.data
+      html = renderRes.data.html || renderRes.data
+    }
+    if (html) {
       renderedHtml.value = html.replace(/<img\b/gi, '<img loading="lazy" decoding="async"')
 
       // 渲染完成后给 heading 补 id（用于 TOC 跳转）

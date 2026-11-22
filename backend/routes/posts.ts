@@ -5,6 +5,7 @@ import path from 'path';
 import { buildIndex, readIndex, addOrUpdatePost, removePost, getMonthDir, getMonthDirFromSlug } from '../services/post_index';
 import { syncTagsForPost } from '../services/tag';
 import { updatePostStats, updateTagStats } from '../services/site_stats';
+import { renderMarkdown } from '../utils/md_html';
 import { generateSlug } from '../utils/slug';
 import { verifyToken } from '../middleware/auth';
 import { createDataLimiter } from '../utils/rate_limit';
@@ -386,8 +387,8 @@ router.post('/reindex', verifyToken, (req, res) => {
  *       404:
  *         description: 文章不存在
  */
-router.get('/:slug', dataLimiter, (req, res) => {
-  const { slug } = req.params;
+router.get('/:slug', dataLimiter, async (req, res) => {
+  const slug = String(req.params.slug);
 
   // 从索引获取文章元数据和月份目录
   const index = readIndex();
@@ -425,6 +426,10 @@ router.get('/:slug', dataLimiter, (req, res) => {
   content = content.replace(/!\[([^\]]*)\]\((images\/[^)]+)\)/g, (match, alt, imgPath) => {
     return `![${alt}](/images/posts/${monthDir}/${imgPath})`;
   });
+  if (req.query.render === '1') {
+    const html = await renderMarkdown(content);
+    return res.json({ slug, meta, html });
+  }
   res.json({ slug, content, meta });
 });
 

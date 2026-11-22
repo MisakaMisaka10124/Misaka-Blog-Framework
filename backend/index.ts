@@ -1,7 +1,6 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import open from 'open';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import apiRouter from './routes/index';
@@ -11,7 +10,7 @@ import { initSiteStats } from './services/site_stats';
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 const configPath = path.join(__dirname, './data/config/core_server_config.json');
 const serverConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -59,7 +58,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
  */
 app.get('/api/config', (req, res) => {
   try {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     const lang = req.query.lang || 'zh_cn';
     const siteConfigPath = path.join(__dirname, `./data/langrage/site_config_${lang}.json`);
 
@@ -140,22 +138,23 @@ app.get('/api/friendlinks', (req, res) => {
 
 // 静态文件：文章图片（映射到 posts 根目录，支持月份子目录）
 // 安全过滤：禁止访问 post_index.json 和 tags/ 目录
+const imageStaticOptions = { maxAge: '5m' };
 app.use('/images/posts', (req, res, next) => {
   if (req.path === '/post_index.json' || req.path.startsWith('/tags/')) {
     return res.status(403).end();
   }
   next();
-}, express.static(path.join(__dirname, './data/posts')));
+}, express.static(path.join(__dirname, './data/posts'), imageStaticOptions));
 
 // 静态文件：所有可修改图片统一存放在 data/images/
-app.use('/images/backgrounds', express.static(path.join(__dirname, './data/images/backgrounds')));
-app.use('/images/avatars', express.static(path.join(__dirname, './data/images/avatars')));
-app.use('/images/friends', express.static(path.join(__dirname, './data/images/friends')));
-app.use('/images/social', express.static(path.join(__dirname, './data/images/social')));
-app.use('/images/uploads', express.static(path.join(__dirname, './data/images/uploads')));
+app.use('/images/backgrounds', express.static(path.join(__dirname, './data/images/backgrounds'), imageStaticOptions));
+app.use('/images/avatars', express.static(path.join(__dirname, './data/images/avatars'), imageStaticOptions));
+app.use('/images/friends', express.static(path.join(__dirname, './data/images/friends'), imageStaticOptions));
+app.use('/images/social', express.static(path.join(__dirname, './data/images/social'), imageStaticOptions));
+app.use('/images/uploads', express.static(path.join(__dirname, './data/images/uploads'), imageStaticOptions));
 
 // 静态文件：兜底（favicon、cursor 等框架级静态资源）
-app.use('/images', express.static(path.join(__dirname, '../dist/images')));
+app.use('/images', express.static(path.join(__dirname, '../dist/images'), imageStaticOptions));
 
 // API 路由
 app.use('/api', apiRouter);
@@ -163,16 +162,28 @@ app.use('/api', apiRouter);
 // 前端静态文件（生产模式）
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  const assetsPath = `${path.join(distPath, 'assets')}${path.sep}`;
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      if (filePath.startsWith(assetsPath)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (path.basename(filePath) === 'index.html') {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else if (/\.(?:ico|svg|png|jpe?g|gif|webp|avif|woff2?)$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+      }
+    },
+  }));
   // SPA 回退：非 API、非图片、非文档的路由都返回 index.html
   app.get('/{*path}', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(distPath, 'index.html'));
   });
   console.log(`Frontend served from: ${distPath}`);
 }
 
 const port = serverConfig.server.port;
-app.listen(port, async () => {
+app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
   console.log(`Swagger Docs: http://localhost:${port}/api-docs`);
 
@@ -193,9 +204,4 @@ app.listen(port, async () => {
     console.log('Site stats initialization skipped');
   }
 
-  try {
-    await open(`http://localhost:${port}/api-docs`);
-  } catch (err) {
-    console.log('自动打开浏览器失败，请手动访问上面的链接');
-  }
 });

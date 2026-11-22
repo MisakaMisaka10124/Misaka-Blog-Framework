@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   build: {
-    cssMinify: false,
+    cssMinify: true,
   },
   server: {
     proxy: {

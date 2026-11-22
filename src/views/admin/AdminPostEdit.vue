@@ -1179,11 +1179,11 @@ onUnmounted(() => {
 
 <style>
 /* 浅色模式代码块适配 */
-[data-theme="light"] .admin-post-edit__preview :deep(code) {
+[data-theme="light"] .admin-post-edit__preview code {
   background: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] .admin-post-edit__preview :deep(pre) {
+[data-theme="light"] .admin-post-edit__preview pre {
   background: rgba(0, 0, 0, 0.03);
   border-color: rgba(0, 0, 0, 0.1);
 }

@@ -6,7 +6,7 @@
 - **构建工具**: Vite 8
 - **语言**: TypeScript
 - **样式**: CSS (Scoped) + CSS Variables
-- **路由**: Vue Router 4
+- **路由**: Vue Router 5
 - **HTTP**: Axios
 
 ## 目录结构
@@ -31,7 +31,8 @@ src/
 │   ├── AdminPosts.vue      # 文章列表管理
 │   ├── AdminSettings.vue   # 站点设置（头像/标题/背景/页脚）
 │   ├── AdminFriends.vue    # 友链管理
-│   └── AdminSocial.vue     # 社交媒体管理
+│   ├── AdminSocial.vue     # 社交媒体管理
+│   └── AdminAccount.vue    # 账户设置
 ├── components/             # 通用组件
 │   ├── GlassCard.vue       # 玻璃拟态卡片
 │   ├── HeroHeader.vue      # 英雄头图
@@ -58,18 +59,15 @@ src/
 
 ```typescript
 const routes = [
-  { path: '/', name: 'home', component: Home },
-  { path: '/categories', name: 'categories', component: Categories },
-  { path: '/categories/:tag', name: 'category-detail', component: CategoryDetail },
-  { path: '/post/:slug', name: 'post', component: PostDetail },
-  { path: '/search', name: 'search', component: Search },
-  { path: '/upload', name: 'upload', component: Upload, beforeEnter: authGuard },
-  { path: '/login', name: 'login', component: Login },
-  { path: '/friends', name: 'friends', component: Friends },
-  { path: '/about', name: 'about', component: About },
-  { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound },  // 404
+  { path: '/', component: () => import('../layout/AppLayout.vue'), children: [/* 前台页面 */] },
+  { path: '/login', component: () => import('../views/Login.vue') },
+  { path: '/admin', component: () => import('../layout/AdminLayout.vue'), meta: { requiresAuth: true }, children: [/* 后台页面 */] },
+  { path: '/upload', redirect: '/admin/posts' },
+  { path: '/:pathMatch(.*)*', component: () => import('../views/NotFound.vue') },
 ]
 ```
+
+各页面组件通过动态 `import()` 按路由加载，后台页面不会进入前台首屏代码包。
 
 ## 核心页面
 
@@ -89,7 +87,7 @@ const routes = [
 ### PostDetail.vue（文章详情）
 
 - 英雄头图（封面图 + 标题 + 元数据）
-- Markdown 渲染（调用 `/api/md/render`，支持代码高亮）
+- Markdown 渲染（文章接口直接返回渲染后的 HTML，支持代码高亮；编辑器预览仍调用 `/api/md/render`）
 - 目录侧边栏（自动提取 H2/H3）
 - 标签徽章
 
@@ -114,7 +112,7 @@ const routes = [
 
 - 站点介绍内容（v-html 渲染）
 - 访客统计栏：今日活跃、今日更新、总访客、今日访客、当前 IP（带国旗）
-- 国旗使用 flag-icons CDN（jsdelivr）
+- 国家旗帜使用 Unicode Emoji，不依赖第三方 CDN
 
 ### NotFound.vue（404 页面）
 
@@ -152,11 +150,10 @@ const routes = [
 仅在前台 `.app-layout` 内生效，后台使用系统光标：
 
 ```css
-@media (pointer: fine) {
-  .app-layout * { cursor: none !important; }
-  .custom-cursor { display: block; }
-}
+.app-layout.has-mouse-pointer * { cursor: none !important; }
 ```
+
+前台通过 `pointermove` 判断当前输入设备。鼠标移动时显示自定义光标，触控输入时隐藏，兼容带触屏的电脑。
 
 ### 布局分离
 
